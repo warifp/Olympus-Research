@@ -9,6 +9,7 @@
 
 namespace mcp
 {
+	class block_cache;
 	class composer
 	{
 	public:
@@ -25,6 +26,7 @@ namespace mcp
 		mcp::ledger & m_ledger;
 		mcp::block_store & m_store;
 		std::shared_ptr<mcp::iblock_cache> m_cache;
+		std::shared_ptr<mcp::block_cache> m_cache2;
 		std::shared_ptr<mcp::TransactionQueue> m_tq;
 		std::shared_ptr<mcp::ApproveQueue> m_aq;
         mcp::log m_log = { mcp::log("node") };

@@ -290,7 +290,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 	uint64_t const & last_summary_mci(*last_summary_block_state->main_chain_index);
 
 	//check from account is witness
-	if (!mcp::param::is_witness(mcp::approve::calc_curr_epoch(last_summary_mci), block->from()))
+	if (!mcp::param::is_witness(m_store, m_cache, mcp::approve::calc_curr_epoch(last_summary_mci), block->from()))
 	{
 		result.code = mcp::validate_result_codes::invalid_block;
 		result.err_msg = boost::str(boost::format("account %1% is not witness") % block->from().hexPrefixed());
@@ -344,7 +344,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 		return result;
 	}
 
-	mcp::witness_param const & w_param(mcp::param::get_witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
+	mcp::witness_param const & w_param(mcp::param::get_witness_param(m_store, m_cache, mcp::approve::calc_curr_epoch(last_summary_mci)));
 
 	//check majority different of witnesses
 	bool is_diff_majority(m_ledger.check_majority_witness(transaction_a, cache_a, best_pblock_hash, block->from(), w_param));

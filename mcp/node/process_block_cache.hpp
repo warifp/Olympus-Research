@@ -62,6 +62,7 @@ namespace mcp
 
 		void mark_as_changing();
 		void commit_and_clear_changing();
+		std::shared_ptr<mcp::block_cache> get_block_cache() { return m_cache; }
 
 	private:
 		mcp::block_store & m_store;

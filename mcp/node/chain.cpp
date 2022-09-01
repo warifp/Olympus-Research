@@ -260,7 +260,7 @@ void mcp::chain::save_approve(mcp::timeout_db_transaction & timeout_tx_a, std::s
 	}
 }
 
-void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, uint64_t mc_last_summary_mci){
+void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::block_cache> cache_a, uint64_t mc_last_summary_mci){
 	static uint64_t old_summary_mci = 0;
 	static uint64_t old_elected_epoch = 0;
 	uint64_t elected_epoch = mcp::approve::calc_elect_epoch(mc_last_summary_mci) - 1;
@@ -334,7 +334,7 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, u
 	}
 	#endif
 
-	mcp::witness_param w_param = mcp::param::get_witness_param(m_last_epoch);
+	mcp::witness_param w_param = mcp::param::get_witness_param(m_store, cache_a, m_last_epoch);
 	LOG(m_log.info) << "[add_new_witness_list] in last_summary_mci = " << mc_last_summary_mci << " elected_epoch = " << elected_epoch;
 	
 	epoch_elected_list elected_list;
@@ -384,11 +384,11 @@ void mcp::chain::init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::
 
 void mcp::chain::init_witness(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a)
 {
-	mcp::witness_param w_param = mcp::param::get_witness_param(m_last_epoch);
+	mcp::witness_param w_param = mcp::param::get_witness_param(m_store, cache_a->get_block_cache(), m_last_epoch);
 	for(uint64_t i=1; i<=m_last_epoch + 2; i++){
 		mcp::epoch_elected_list list;
 		if(m_store.epoch_elected_approve_receipts_get(transaction_a, i, list)){
-			continue;;
+			continue;
 		}
 
 		std::vector<std::string> test_witness;
@@ -435,7 +435,7 @@ void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::sh
 
 			//timeout_tx_a.commit_if_timeout();
 			
-			add_new_witness_list(transaction, last_summary_mci_stable);
+			add_new_witness_list(transaction, cache_a->get_block_cache(), last_summary_mci_stable);
 		}
 		catch (std::exception const & e)
 		{
@@ -494,7 +494,7 @@ void mcp::chain::write_dag_block(mcp::db::db_transaction & transaction_a, std::s
 		&& last_summary_block_state->is_on_main_chain
 		&& last_summary_block_state->main_chain_index);
 	uint64_t const & last_summary_mci(*last_summary_block_state->main_chain_index);
-	mcp::witness_param const & w_param(mcp::param::get_witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
+	mcp::witness_param const & w_param(mcp::param::get_witness_param(m_store, cache_a->get_block_cache(), mcp::approve::calc_curr_epoch(last_summary_mci)));
 
 	//best parent
 	mcp::block_hash best_pblock_hash(m_ledger.determine_best_parent(transaction_a, cache_a, block_a->parents()));

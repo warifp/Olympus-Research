@@ -12,6 +12,7 @@ mcp::composer::composer(
 	m_ledger(ledger_a),
 	m_store(store_a),
 	m_cache(cache_a),
+	m_cache2(cache_a),
 	m_tq(tq),
 	m_aq(aq)
 {
@@ -188,12 +189,12 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 
 		assert_x(best_pblock_hash == m_ledger.determine_best_parent(transaction_a, m_cache, parents));
 
-		if (!mcp::param::is_witness(mcp::approve::calc_curr_epoch(last_summary_mci), from_a))
+		if (!mcp::param::is_witness(m_store, m_cache2, mcp::approve::calc_curr_epoch(last_summary_mci), from_a))
 			BOOST_THROW_EXCEPTION(BadComposeBlock()
 				<< errinfo_comment("compose error: account is not a witness account now."));
 
 		approves = m_aq->topApproves(b_param.max_link_size, mcp::approve::calc_elect_epoch(last_summary_mci));
-		mcp::witness_param const & w_param(mcp::param::get_witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
+		mcp::witness_param const & w_param(mcp::param::get_witness_param(m_store, m_cache2, mcp::approve::calc_curr_epoch(last_summary_mci)));
 
 		//check majority different of witnesses
 		bool is_diff_majority(m_ledger.check_majority_witness(transaction_a, m_cache, best_pblock_hash, from_a, w_param));
