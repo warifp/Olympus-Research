@@ -344,7 +344,7 @@ mcp::validate_result mcp::validation::dag_validate(mcp::db::db_transaction & tra
 		return result;
 	}
 
-	mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
+	mcp::witness_param const & w_param(mcp::param::get_witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
 
 	//check majority different of witnesses
 	bool is_diff_majority(m_ledger.check_majority_witness(transaction_a, cache_a, best_pblock_hash, block->from(), w_param));

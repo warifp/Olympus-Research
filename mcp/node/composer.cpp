@@ -193,7 +193,7 @@ void mcp::composer::pick_parents_and_last_summary_and_wl_block(mcp::db::db_trans
 				<< errinfo_comment("compose error: account is not a witness account now."));
 
 		approves = m_aq->topApproves(b_param.max_link_size, mcp::approve::calc_elect_epoch(last_summary_mci));
-		mcp::witness_param const & w_param(mcp::param::witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
+		mcp::witness_param const & w_param(mcp::param::get_witness_param(mcp::approve::calc_curr_epoch(last_summary_mci)));
 
 		//check majority different of witnesses
 		bool is_diff_majority(m_ledger.check_majority_witness(transaction_a, m_cache, best_pblock_hash, from_a, w_param));

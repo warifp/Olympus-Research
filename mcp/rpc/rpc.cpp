@@ -1029,7 +1029,7 @@ void mcp::rpc_handler::nodes(mcp::json &j_response, bool &)
 
 void mcp::rpc_handler::witness_list(mcp::json &j_response, bool &)
 {
-	mcp::witness_param const &w_param(mcp::param::witness_param(m_chain->last_epoch()));
+	mcp::witness_param const &w_param(mcp::param::get_witness_param(m_chain->last_epoch()));
 	mcp::json witness_list_l = mcp::json::array();
 	for (auto i : w_param.witness_list)
 	{
@@ -2533,7 +2533,7 @@ void mcp::rpc_handler::epoch_elected_approve_receipts(mcp::json &j_response, boo
 
 	if (epoch == 0)
 	{
-		for (auto witness : mcp::param::witness_param(0).witness_list)
+		for (auto witness : mcp::param::get_witness_param(0).witness_list)
 		{
 			mcp::json elected_l;
 			elected_l["from"] = witness.hexPrefixed();

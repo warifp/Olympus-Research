@@ -58,18 +58,18 @@ public:
 		init_witness_param();
 	}
 
-	static mcp::block_param const & block_param(uint64_t const & last_epoch_a)
+	static mcp::block_param const & block_param(uint64_t const & last_summary_mci_a)
 	{
 		mcp::block_param const & b_param
-			= find_by_last_epoch<mcp::block_param>(last_epoch_a, block_param_map);
+			= find_by_last_summary_mci<mcp::block_param>(last_summary_mci_a, block_param_map);
 		return b_param;
 	}
 
-	static mcp::witness_param const & witness_param(uint64_t const & epoch_a)
+	static mcp::witness_param const & get_witness_param(uint64_t const & epoch_a)
 	{
 		DEV_READ_GUARDED(m_mutex_witness){
 			mcp::witness_param const & w_param
-				= find_by_last_epoch<mcp::witness_param>(epoch_a, witness_param_map);
+				= find_by_last_epoch(epoch_a, witness_param_map);
 			return w_param;
 		}
 	}
@@ -77,7 +77,7 @@ public:
 	static bool is_witness(uint64_t const & epoch_a, dev::Address const & account_a)
 	{
 		DEV_READ_GUARDED(m_mutex_witness){
-			mcp::witness_param const & w_param = witness_param(epoch_a);
+			mcp::witness_param const & w_param = get_witness_param(epoch_a);
 			if (w_param.witness_list.count(account_a))
 				return true;
 			return false;
@@ -244,14 +244,28 @@ private:
 	}
 
 	template<class T>
-	static T const & find_by_last_epoch(uint64_t const & epoch_a, std::map<uint64_t, T> const & maps_a)
+	static T const & find_by_last_summary_mci(uint64_t const & last_summary_mci_a, std::map<uint64_t, T> const & maps_a)
+	{
+		for (auto it(maps_a.rbegin()); it != maps_a.rend(); it++)
+		{
+			uint64_t const & min_last_summary_mci(it->first);
+			if (last_summary_mci_a >= min_last_summary_mci)
+			{
+				T const & result(it->second);
+				return result;
+			}
+		}
+		assert_x(false);
+	}
+
+	static mcp::witness_param const & find_by_last_epoch(uint64_t const & epoch_a, std::map<uint64_t, mcp::witness_param> const & maps_a)
 	{
 		for (auto it(maps_a.rbegin()); it != maps_a.rend(); it++)
 		{
 			uint64_t const & min_last_epoch(it->first);
 			if (epoch_a >= min_last_epoch)
 			{
-				T const & result(it->second);
+				mcp::witness_param const & result(it->second);
 				return result;
 			}
 		}
