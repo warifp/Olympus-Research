@@ -341,8 +341,11 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, s
 	if(vrf_outputs.find(elected_epoch) == vrf_outputs.end()) return;
 	if(vrf_outputs[elected_epoch].size() < w_param.witness_count)
 	{
-		LOG(m_log.info) << "Not switch witness_list because elector's number is too short: " << vrf_outputs[elected_epoch].size();
+		LOG(m_log.info) << "Not add epoch" << elected_epoch << "'s witness_list because electors number is too short: " << vrf_outputs[elected_epoch].size();
 		vrf_outputs[elected_epoch].clear();
+
+		m_store.epoch_elected_approve_receipts_get(transaction_a, elected_epoch-1, elected_list);
+		m_store.epoch_elected_approve_receipts_put(transaction_a, elected_epoch, elected_list);
 		return;
 	}
 	std::vector<std::string> test_witness;
@@ -385,12 +388,13 @@ void mcp::chain::init_vrf_outputs(mcp::db::db_transaction & transaction_a, std::
 void mcp::chain::init_witness(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a)
 {
 	mcp::witness_param w_param = mcp::param::get_witness_param(m_store, cache_a->get_block_cache(), m_last_epoch);
-	for(uint64_t i=1; i<=m_last_epoch + 2; i++){
+	uint64_t elect_epoch = mcp::approve::calc_elect_epoch(m_last_summary_mci);
+	uint64_t start = elect_epoch > 5 ? elect_epoch-5 : 1;
+	for(uint64_t i=start; i<=elect_epoch-1; i++){
 		mcp::epoch_elected_list list;
 		if(m_store.epoch_elected_approve_receipts_get(transaction_a, i, list)){
-			continue;
+			assert_x(false);
 		}
-
 		std::vector<std::string> test_witness;
 		for(auto hash : list.hashs)
 		{

@@ -2,11 +2,12 @@
 #include <mcp/core/block_cache.hpp>
 #include <mcp/core/block_store.hpp>
 #include <mcp/db/db_transaction.hpp>
+#include <mcp/common/log.hpp>
 
 mcp::mcp_networks mcp::mcp_network = mcp::mcp_networks::mcp_live_network;
-
 dev::u256 mcp::gas_price;
 uint64_t mcp::chain_id;
+mcp::log config_log = { mcp::log("node") };
 
 bool mcp::is_test_network()
 {
@@ -86,12 +87,37 @@ mcp::witness_param mcp::param::find_by_last_epoch(mcp::block_store &store_a, std
 		}
 	}
 
+	LOG(config_log.info) << "[find_by_last_epoch] epoch=" << epoch_a << " search witness from db";
 	mcp::witness_param param(maps_a.rbegin()->second);
 	param.witness_list.clear();
 	mcp::db::db_transaction transaction(store_a.create_transaction());
 	if (epoch_a == 0)
 	{
-		param.witness_list = to_witness_list(test_witness_str_list_v0);
+		switch (mcp::mcp_network)
+		{
+			case mcp::mcp_networks::mcp_mini_test_network:
+			{
+				param.witness_list = to_witness_list(mini_test_witness_str_list_v0);
+				break;
+			}
+			case mcp::mcp_networks::mcp_test_network:
+			{
+				param.witness_list = to_witness_list(test_witness_str_list_v0);
+				break;
+			}
+			case mcp::mcp_networks::mcp_beta_network:
+			{
+				param.witness_list = to_witness_list(beta_witness_str_list_v0);
+				break;
+			}
+			case mcp::mcp_networks::mcp_live_network:
+			{
+				param.witness_list = to_witness_list(live_witness_str_list_v0);
+				break;
+			}
+			default:
+				assert_x_msg(false, "Invalid network");
+		}
 	}
 	else
 	{

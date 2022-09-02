@@ -105,6 +105,24 @@ public:
 	static void add_witness_param(uint64_t const & epoch_a, mcp::witness_param &w_param){
 		DEV_WRITE_GUARDED(m_mutex_witness){
 			mcp::param::witness_param_map.insert({epoch_a, w_param });
+
+			//Avoid continuous size growth
+			if(mcp::param::witness_param_map.size() > 5){
+				for(auto it=mcp::param::witness_param_map.begin(); it!=mcp::param::witness_param_map.end();){
+					if(it->first <= epoch_a - 5){
+						it = mcp::param::witness_param_map.erase(it);
+					}
+					else{
+						return;
+					}
+				}
+			}
+		}
+	}
+
+	static uint64_t witness_param_size(){
+		DEV_READ_GUARDED(m_mutex_witness){
+			return witness_param_map.size();
 		}
 	}
 
