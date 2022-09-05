@@ -342,10 +342,17 @@ void mcp::chain::add_new_witness_list(mcp::db::db_transaction & transaction_a, s
 	if(vrf_outputs[elected_epoch].size() < w_param.witness_count)
 	{
 		LOG(m_log.info) << "Not add epoch" << elected_epoch << "'s witness_list because electors number is too short: " << vrf_outputs[elected_epoch].size();
-		vrf_outputs[elected_epoch].clear();
 
-		m_store.epoch_elected_approve_receipts_get(transaction_a, elected_epoch-1, elected_list);
-		m_store.epoch_elected_approve_receipts_put(transaction_a, elected_epoch, elected_list);
+		if(!m_store.epoch_elected_approve_receipts_get(transaction_a, elected_epoch-1, elected_list)){
+			m_store.epoch_elected_approve_receipts_put(transaction_a, elected_epoch, elected_list);
+			mcp::param::add_witness_param(elected_epoch, w_param);
+		}
+		else
+		{
+			LOG(m_log.info) << "[add_new_witness_list] The election fails and there is no previous witness list. Use the default value.";
+		}
+		vrf_outputs[elected_epoch].clear();
+		m_aq->dropObsolete(m_last_epoch);
 		return;
 	}
 	std::vector<std::string> test_witness;

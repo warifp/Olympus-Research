@@ -2539,7 +2539,6 @@ void mcp::rpc_handler::epoch_elected_approve_receipts(mcp::json &j_response, boo
 			elected_l["from"] = witness.hexPrefixed();
 			electeds_l.push_back(elected_l);
 		}
-		
 	}
 	else
 	{
@@ -2554,7 +2553,7 @@ void mcp::rpc_handler::epoch_elected_approve_receipts(mcp::json &j_response, boo
 				elected_l["proof"] = toHexPrefixed(approve->m_proof);
 			}
 			else {
-				//throw JsonRpcException(exceptionToErrorMessage());
+				assert_x(false);
 			}
 
 			auto approve_receipt = m_cache->approve_receipt_get(transaction, hash);
@@ -2562,7 +2561,7 @@ void mcp::rpc_handler::epoch_elected_approve_receipts(mcp::json &j_response, boo
 				elected_l["output"] = toHexPrefixed(approve_receipt->output());
 			}
 			else {
-				//throw JsonRpcException(exceptionToErrorMessage());
+				assert_x(false);
 			}
 			electeds_l.push_back(elected_l);
 		}

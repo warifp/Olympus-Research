@@ -91,8 +91,8 @@ mcp::witness_param mcp::param::find_by_last_epoch(mcp::block_store &store_a, std
 	mcp::witness_param param(maps_a.rbegin()->second);
 	param.witness_list.clear();
 	mcp::db::db_transaction transaction(store_a.create_transaction());
-	if (epoch_a == 0)
-	{
+
+	std::function<void()> get_default_witness_list = [&param](){
 		switch (mcp::mcp_network)
 		{
 			case mcp::mcp_networks::mcp_mini_test_network:
@@ -118,19 +118,30 @@ mcp::witness_param mcp::param::find_by_last_epoch(mcp::block_store &store_a, std
 			default:
 				assert_x_msg(false, "Invalid network");
 		}
+	};
+
+	if (epoch_a == 0)
+	{
+		get_default_witness_list();
 	}
 	else
 	{
 		epoch_elected_list list;
-		store_a.epoch_elected_approve_receipts_get(transaction, epoch_a, list);
-		for (auto hash : list.hashs)
-		{
-			auto approve_receipt = cache_a->approve_receipt_get(transaction, hash);
-			if (approve_receipt) {
-				param.witness_list.emplace(approve_receipt->from());
-			}
-			else {
-				assert_x(false);
+		if(store_a.epoch_elected_approve_receipts_get(transaction, epoch_a, list)){
+			// When the election fails from start, use default witness list
+			get_default_witness_list();
+			LOG(config_log.info) << "[find_by_last_epoch] use default witness list";
+		}
+		else{
+			for (auto hash : list.hashs)
+			{
+				auto approve_receipt = cache_a->approve_receipt_get(transaction, hash);
+				if (approve_receipt) {
+					param.witness_list.emplace(approve_receipt->from());
+				}
+				else {
+					assert_x(false);
+				}
 			}
 		}
 	}
