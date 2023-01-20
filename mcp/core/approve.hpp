@@ -14,7 +14,25 @@ namespace mcp
 	class approve
 	{
 	public:
+		enum ApproveType {WitnessElection=0, DENMiningPing=1};
+
+		struct witness_election{
+			witness_election(Epoch epoch, h648 proof){
+				m_epoch = epoch;
+				m_proof = proof;
+			}
+			Epoch m_epoch;
+			h648 m_proof;
+			mutable dev::PublicCompressed m_publicCompressed;
+			mutable h256 m_outputs;			    ///< Cached output of proof.
+		};
+
+		struct den_mining_ping{
+			
+		};
+
 		approve() {}
+
 		/// Constructs a transaction from a transaction skeleton & optional secret.
 		approve(Epoch const & _epoch, h648 const & _proof, Secret const& _s);
 
@@ -66,20 +84,19 @@ namespace mcp
 		void sign(Secret const& _priv);			///< Sign the transaction.
 
 		void vrf_verify(mcp::block_hash const& msg) const;
-		h256 outputs() { return m_outputs; }
+		h256 outputs() { assert(m_type == WitnessElection); return m_witnessElection->m_outputs; }
 		
-		Epoch epoch() const { return m_epoch; }
-		h648 proof() const { return m_proof; }
+		Epoch epoch() const { assert(m_type == WitnessElection); return m_witnessElection->m_epoch; }
+		h648 proof() const { assert(m_type == WitnessElection); return m_witnessElection->m_proof; }
 		
 	private:
-		Epoch m_epoch;
-		h648 m_proof;
+		ApproveType m_type;
+		boost::optional<witness_election> m_witnessElection;
+		boost::optional<den_mining_ping> m_den_mining_ping;
 
 		SignatureStruct m_vrs;	///< The signature of the approve. Encodes the sender.
 		uint64_t m_chainId;
 		mutable h256 m_hashWith;			///< Cached hash of approve with signature.
-		mutable dev::PublicCompressed m_publicCompressed;
-		mutable h256 m_outputs;			    ///< Cached output of proof.
 		mutable boost::optional<Address> m_sender;  ///< Cached sender, determined from signature.
 	};
 }
