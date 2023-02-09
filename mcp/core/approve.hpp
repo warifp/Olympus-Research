@@ -28,7 +28,8 @@ namespace mcp
 		};
 
 		struct den_mining_ping{
-			
+			uint64_t mci;
+			block_hash hash;
 		};
 
 		approve() {}
