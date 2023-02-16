@@ -799,6 +799,11 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						dev::eth::McInfo mc_info(m_last_stable_index_internal, mci, mc_timestamp, mc_last_summary_mci);
 						//mcp::stopwatch_guard sw("set_block_stable2_1");
 						std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction_a, cache_a, *_t, mc_info, Permanence::Committed, dev::eth::OnOpFunc());
+						
+						LOG(m_log.info) << "TransactionReceipt size=" << result.second.log().size();
+						for(size_t i=0; i<result.second.log().size(); i++){
+							LOG(m_log.info) << "i=" << i << " " << dev::toHex(result.second.log()[i].data) << " address=" << result.second.log()[i].address.hexPrefixed();
+						}
 
 						//// check if the execution is successful
 						//if (result.second.statusCode() == 0)
