@@ -90,6 +90,8 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 	m_last_stable_epoch = mcp::epoch(m_last_stable_mci_internal);
 
 	update_cache();
+
+	m_den_mining_contract = right160(sha3(rlpList(mcp::sys_contract, 0)));
 }
 
 void mcp::chain::stop()
@@ -804,6 +806,13 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						for(size_t i=0; i<result.second.log().size(); i++){
 							LOG(m_log.info) << "i=" << i << " " << dev::toHex(result.second.log()[i].data) << " address=" << result.second.log()[i].address.hexPrefixed();
 						}
+						
+						if(m_den_mining_contract == _t->to()){
+							handle_den_mining_event(result.second.log());
+						}
+						else{
+							LOG(m_log.info) << "handle_den_mining_event not in";
+						}
 
 						//// check if the execution is successful
 						//if (result.second.statusCode() == 0)
@@ -1334,4 +1343,9 @@ mcp::json mcp::chain::traceTransaction(Executive& _e, Transaction const& _t, mcp
 		_e.go(st.onOp());
 	_e.finalize();
 	return st.jsonValue();
+}
+
+void mcp::chain::handle_den_mining_event(const mcp::log_entries &log_a)
+{
+	LOG(m_log.info) << "handle_den_mining_event in";
 }

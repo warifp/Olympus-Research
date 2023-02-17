@@ -70,6 +70,7 @@ private:
 		b_param_v0.max_parent_size = 16;
 		b_param_v0.max_link_size = 4096;
 		block_param_map.insert({ 0, b_param_v0 });
+		std::string system_contract;
 
 		switch (mcp::mcp_network)
 		{
@@ -77,29 +78,34 @@ private:
 		{
 			chain_id = (uint64_t)9700;
 			gas_price = 10000000;
+			system_contract = "0xfbd7aab441bc6a5e538eb28b96f2a85fe7506c46";
 			break;
 		}
 		case mcp::mcp_networks::mcp_test_network:
 		{
 			chain_id = (uint64_t)9700;
 			gas_price = 10000000;
+			system_contract = "0xfbd7aab441bc6a5e538eb28b96f2a85fe7506c46";
 			break;
 		}
 		case mcp::mcp_networks::mcp_beta_network:
 		{
 			chain_id = (uint64_t)972;// Ascraeus 972; huygens 971
 			gas_price = 10000000;
+			system_contract = "0xfbd7aab441bc6a5e538eb28b96f2a85fe7506c46";
 			break;
 		}
 		case mcp::mcp_networks::mcp_live_network:
 		{
 			chain_id = (uint64_t)970;
 			gas_price = (uint256_t)5e13;
+			system_contract = "0xfbd7aab441bc6a5e538eb28b96f2a85fe7506c46";
 			break;
 		}
 		default:
 			assert_x_msg(false, "Invalid network");
 		}
+		sys_contract = dev::Address(system_contract);
 	}
 
 	static void init_witness_param()

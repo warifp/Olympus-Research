@@ -28,6 +28,7 @@ extern mcp::mcp_networks mcp_network;
 
 extern dev::u256 gas_price;
 extern uint64_t chain_id;
+extern dev::Address sys_contract;
 
 bool is_test_network();
 mcp::uint256_t chainID();
