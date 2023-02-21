@@ -734,16 +734,19 @@ void mcp::chain::update_latest_included_mci(mcp::db::db_transaction & transactio
 void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, uint64_t const &mci, mcp::block_hash const & block_hash_a)
 {
 	mcp::db::db_transaction & transaction_a(timeout_tx_a.get_transaction());
+	LOG(m_log.info) << "[advance_stable_mci]" << __LINE__;
 
 	mcp::block_hash mc_stable_hash;
 	bool mc_stable_hash_error(m_store.main_chain_get(transaction_a, mci, mc_stable_hash));
 	assert_x(!mc_stable_hash_error);
+	LOG(m_log.info) << "[advance_stable_mci]" << __LINE__;
 
 	std::map<uint64_t, std::set<mcp::block_hash>> dag_stable_block_hashs; //order by block level and hash
 	search_stable_block(transaction_a, cache_a, mc_stable_hash, mci, dag_stable_block_hashs);
 
 	std::shared_ptr<mcp::block> mc_stable_block = cache_a->block_get(transaction_a, mc_stable_hash);
 	assert_x(mc_stable_block != nullptr);
+	LOG(m_log.info) << "[advance_stable_mci]" << __LINE__;
 
 	std::shared_ptr<mcp::block_state> last_summary_state(cache_a->block_state_get(transaction_a, mc_stable_block->last_summary_block()));
 	assert_x(last_summary_state);
@@ -755,12 +758,15 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 	auto block_to_advance = cache_a->block_get(transaction_a, block_hash_a);
 	uint64_t const & stable_timestamp = block_to_advance->exec_timestamp();
 	uint64_t const & mc_timestamp = mc_stable_block->exec_timestamp();
+	LOG(m_log.info) << "[advance_stable_mci]" << __LINE__;
 
 	for (auto iter_p(dag_stable_block_hashs.begin()); iter_p != dag_stable_block_hashs.end(); iter_p++)
 	{
+		LOG(m_log.info) << "[advance_stable_mci]" << __LINE__;
 		std::set<mcp::block_hash> const & hashs(iter_p->second);
 		for (auto iter(hashs.begin()); iter != hashs.end(); iter++)
 		{
+			LOG(m_log.info) << "[advance_stable_mci]" << __LINE__;
 			mcp::block_hash const & dag_stable_block_hash(*iter);
 
 			//LOG(m_log.info) << "[advance_stable_mci]" << dag_stable_block_hash.hexPrefixed();
@@ -768,6 +774,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 			m_last_stable_index_internal++;
 			std::vector<bytes> receipts;
 			{
+				LOG(m_log.info) << "[advance_stable_mci]" << __LINE__;
 				//mcp::stopwatch_guard sw("advance_stable_mci2_1");
 
 				//handle dag stable block 
@@ -780,6 +787,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 				///account c : b2, b3
 				auto links(dag_stable_block->links());
 				unsigned index = 0;
+				LOG(m_log.info) << "[advance_stable_mci]" << __LINE__;
 				for (auto i = 0; i < links.size(); i++)
 				{
 					h256 const& link_hash = links[i];
@@ -793,11 +801,13 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						index++;
 						continue;
 					}
+					LOG(m_log.info) << "[advance_stable_mci]" << __LINE__;
 					auto _t = cache_a->transaction_get(transaction_a, link_hash);
 					/// exec transactions
 					bool invalid = false;
 					try
 					{
+						LOG(m_log.info) << "[advance_stable_mci]" << __LINE__;
 						dev::eth::McInfo mc_info(m_last_stable_index_internal, mci, mc_timestamp, mc_last_summary_mci);
 						//mcp::stopwatch_guard sw("set_block_stable2_1");
 						std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction_a, cache_a, *_t, mc_info, Permanence::Committed, dev::eth::OnOpFunc());
@@ -808,7 +818,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						}
 						
 						if(m_den_mining_contract == _t->to()){
-							handle_den_mining_event(result.second.log());
+							m_den.handle_den_mining_event(result.second.log());
 						}
 						else{
 							LOG(m_log.info) << "handle_den_mining_event not in";
@@ -1343,9 +1353,4 @@ mcp::json mcp::chain::traceTransaction(Executive& _e, Transaction const& _t, mcp
 		_e.go(st.onOp());
 	_e.finalize();
 	return st.jsonValue();
-}
-
-void mcp::chain::handle_den_mining_event(const mcp::log_entries &log_a)
-{
-	LOG(m_log.info) << "handle_den_mining_event in";
 }

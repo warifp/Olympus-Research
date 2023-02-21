@@ -10,6 +10,7 @@
 #include <mcp/node/chain_state.hpp>
 #include <mcp/node/sync.hpp>
 #include <mcp/core/approve_receipt.hpp>
+#include <mcp/node/den/den.hpp>
 
 namespace mcp
 {
@@ -93,7 +94,6 @@ namespace mcp
 		void search_stable_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const & block_hash, uint64_t const & mci, std::map<uint64_t, std::set<mcp::block_hash>>& stable_block_hashs);
 		void add_new_witness_list(mcp::db::db_transaction & transaction_a, uint64_t mc_last_summary_mci);
 		void init_vrf_outputs(mcp::db::db_transaction & transaction_a);
-		void handle_den_mining_event(const mcp::log_entries &log_a);
 		mcp::block_store m_store;
 		//std::list<std::function<void(std::shared_ptr<mcp::block>)> > m_new_block_observer;
 		//std::queue<std::shared_ptr<mcp::block>> m_new_blocks;
@@ -121,6 +121,7 @@ namespace mcp
 		Signal<uint64_t const&> m_onMciStable; ///<  Called when a subsequent call to import transactions and ready.
 
 		Address m_den_mining_contract;
+		den m_den;
 
         mcp::log m_log = { mcp::log("node") };
 	};
