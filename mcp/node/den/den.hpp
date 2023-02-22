@@ -14,16 +14,26 @@ namespace mcp
         uint64_t mci;
         block_hash hash;
         uint32_t time;
+        bool receive;
+    };
+
+    struct reward_a_day
+    {
+        dev::u256 all_reward;
+        dev::u256 frozen_reward;
     };
     
     struct unit
     {
         dev::Address addr;
         dev::u256 stake_value = 0;
+        uint32_t stake_factor;  //rang [0,10000]
         uint32_t last_calc_time;
+        uint32_t last_calc_day;
         dev::u256 cur_rewords;
-        std::list<dev::u256> frozen_rewards;
-        std::list<mining_ping> pings;
+        std::map<uint32_t, reward_a_day> frozen;
+        uint32_t online_score;  //rang [0,10000]
+        std::map<uint32_t, std::vector<mining_ping>> pings;
     };
 
     struct den_param
@@ -36,8 +46,9 @@ namespace mcp
     {
     public:
         den(){}
-        void handle_den_mining_event(const log_entries &log_a){}
-        void calculate_rewards(const dev::Address &addr, dev::u256 &give_rewards, dev::u256 &frozen_rewards){}
+        void handle_den_mining_event(const log_entries &log_a);
+        bool calculate_rewards(const dev::Address &addr, dev::u256 &give_rewards, dev::u256 &frozen_rewards);
+        void set_cur_time(const uint32_t &time);
     
     private:
         void set_max_stake(const dev::u256 &v);
@@ -49,5 +60,7 @@ namespace mcp
 
         den_param m_param;
         std::unordered_map<dev::Address, unit> m_dens;
+        uint32_t m_cur_time;
+        uint32_t m_cur_day;
     };
 }
