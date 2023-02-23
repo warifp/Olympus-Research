@@ -26,14 +26,13 @@ namespace mcp
     struct unit
     {
         dev::Address addr;
-        dev::u256 stake_value = 0;
         uint32_t stake_factor;  //rang [0,10000]
-        uint32_t last_calc_time;
         uint32_t last_calc_day;
         dev::u256 cur_rewords;
         std::map<uint32_t, reward_a_day> frozen;
+        bool last_receive;  //true: last ping received. false: last ping not received.
         uint32_t online_score;  //rang [0,10000]
-        std::map<uint32_t, std::vector<mining_ping>> pings;
+        std::map<uint32_t, std::map<uint8_t, mining_ping>> pings;
     };
 
     struct den_param
@@ -47,7 +46,7 @@ namespace mcp
     public:
         den(){}
         void handle_den_mining_event(const log_entries &log_a);
-        bool calculate_rewards(const dev::Address &addr, dev::u256 &give_rewards, dev::u256 &frozen_rewards);
+        bool calculate_rewards(const dev::Address &addr, const uint32_t time, dev::u256 &give_rewards, dev::u256 &frozen_rewards, bool provide);
         void set_cur_time(const uint32_t &time);
     
     private:
@@ -60,7 +59,5 @@ namespace mcp
 
         den_param m_param;
         std::unordered_map<dev::Address, unit> m_dens;
-        uint32_t m_cur_time;
-        uint32_t m_cur_day;
     };
 }
