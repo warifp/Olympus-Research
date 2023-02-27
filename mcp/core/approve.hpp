@@ -11,6 +11,11 @@
 using namespace dev;
 namespace mcp
 {
+	struct den_mining_ping{
+		uint64_t mci;
+		block_hash hash;
+	};
+	
 	class approve
 	{
 	public:
@@ -25,11 +30,6 @@ namespace mcp
 			h648 m_proof;
 			mutable dev::PublicCompressed m_publicCompressed;
 			mutable h256 m_outputs;			    ///< Cached output of proof.
-		};
-
-		struct den_mining_ping{
-			uint64_t mci;
-			block_hash hash;
 		};
 
 		approve() {}
