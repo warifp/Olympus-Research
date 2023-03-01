@@ -13,15 +13,10 @@ namespace mcp
 {
     struct mining_ping
     {
-        uint64_t mci;
-        block_hash hash;
+        //uint64_t mci;
+        //block_hash hash;
         uint32_t time;
         bool receive;
-    };
-
-    struct block_time{
-        block_hash hash;
-        uint32_t time;
     };
 
     struct reward_a_day
@@ -41,8 +36,7 @@ namespace mcp
 
         bool last_receive;  //true: last ping received. false: last ping not received.
         uint32_t last_ping_time;
-        uint64_t last_ping_mci;
-        uint32_t ping_interval;
+        uint32_t no_ping_times;
         uint32_t online_score;  //rang [0,10000]
         std::map<uint32_t, std::map<uint8_t, mining_ping>> pings; //<day, <hour, mining_ping>>
     };
@@ -58,10 +52,10 @@ namespace mcp
     public:
         den(){}
         void handle_den_mining_event(const log_entries &log_a);
-        void handle_den_mining_ping(const mcp::den_mining_ping &ping, const dev::Address &addr, const uint32_t &time, db::db_transaction & transaction_a, block_store &store);
+        void handle_den_mining_ping(const dev::Address &addr, const uint32_t &time);
         bool calculate_rewards(const dev::Address &addr, const uint32_t time, dev::u256 &give_rewards, dev::u256 &frozen_rewards, bool provide);
         void set_cur_time(const uint32_t &time);
-        void set_mc_block_time(const uint32_t &mci, const block_time &b_time);
+        void set_mc_block_time(const uint32_t &time, const block_hash &h);
     
     private:
         void set_max_stake(const dev::u256 &v);
@@ -73,6 +67,6 @@ namespace mcp
 
         den_param m_param;
         std::unordered_map<dev::Address, unit> m_dens;
-        std::map<uint32_t, block_time> m_block_time; //<mci, block_time>
+        std::map<uint32_t, block_hash> m_time_block; //<time, hash>
     };
 }
