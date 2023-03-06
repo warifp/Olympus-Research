@@ -222,6 +222,7 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 	m_mcpRpcMethods["nodes"] = &mcp::rpc_handler::nodes;
 	m_mcpRpcMethods["witness_list"] = &mcp::rpc_handler::witness_list;
 	m_mcpRpcMethods["debug_storage_range_at"] = &mcp::rpc_handler::debug_storage_range_at;
+	m_mcpRpcMethods["get_main_chain_block"] = &mcp::rpc_handler::get_main_chain_block;
 
 	m_mcpRpcMethods["epoch_approves"] = &mcp::rpc_handler::epoch_approves;
 	m_mcpRpcMethods["approve_receipt"] = &mcp::rpc_handler::approve_receipt;
@@ -2535,3 +2536,33 @@ void mcp::rpc_handler::approve_receipt(mcp::json &j_response, bool &)
 	j_response["result"] = approve_receipt_l;
 }
 
+void mcp::rpc_handler::get_main_chain_block(mcp::json &j_response, bool &)
+{
+	if (request.count("mci") == 0)
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidMci());
+	}
+	uint64_t mci = jsToInt(request["mci"]);
+
+	try
+	{
+		mcp::db::db_transaction transaction(m_store.create_transaction());
+		mcp::block_hash block_hash;
+		if (m_store.main_chain_get(transaction, mci, block_hash))
+		{
+			throw "";
+		}
+
+		auto block(m_cache->block_get(transaction, block_hash));
+		if (block == nullptr)
+		{
+			throw "";
+		}
+
+		j_response["block"] = toJson(*block, false);
+	}
+	catch (...)
+	{
+		j_response["block"] = nullptr;
+	}
+}

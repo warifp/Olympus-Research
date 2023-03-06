@@ -8,6 +8,7 @@
 #include <mcp/core/log_entry.hpp>
 #include <mcp/core/approve.hpp>
 #include <mcp/core/block_store.hpp>
+#include <mcp/common/log.hpp>
 
 namespace mcp
 {
@@ -68,5 +69,7 @@ namespace mcp
         den_param m_param;
         std::unordered_map<dev::Address, unit> m_dens;
         std::map<uint32_t, block_hash> m_time_block; //<time, hash>
+        
+        mcp::log m_log = { mcp::log("node") };
     };
 }

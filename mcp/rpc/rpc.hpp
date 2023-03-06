@@ -158,6 +158,7 @@ public:
 	void personal_ecRecover(mcp::json & j_response, bool & async);
 	void epoch_approves(mcp::json &j_response, bool &);
 	void approve_receipt(mcp::json &j_response, bool &);
+	void get_main_chain_block(mcp::json &j_response, bool &);
 
 	std::string body;
 	mcp::rpc & rpc;

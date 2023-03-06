@@ -44,7 +44,10 @@ void mcp::den::set_mc_block_time(const uint32_t &time, const block_hash &h)
 
 void mcp::den::handle_den_mining_event(const log_entries &log_a)
 {
-
+    LOG(m_log.info) << "handle_den_mining_event in size=" << log_a.size();
+    for(size_t i=0; i<log_a.size(); i++){
+        LOG(m_log.info) << "i=" << i << " " << dev::toHex(log_a[i].data) << " address=" << log_a[i].address.hexPrefixed();
+    }
 }
 
 // time in the block which include ping approve.
