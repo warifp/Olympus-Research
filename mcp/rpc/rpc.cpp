@@ -2542,7 +2542,8 @@ void mcp::rpc_handler::get_main_chain_block(mcp::json &j_response, bool &)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidMci());
 	}
-	uint64_t mci = jsToInt(request["mci"]);
+	//uint64_t mci = jsToInt(request["mci"]);
+	uint64_t mci = request["mci"];
 
 	try
 	{
