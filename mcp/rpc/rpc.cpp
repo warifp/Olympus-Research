@@ -226,6 +226,7 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 
 	m_mcpRpcMethods["epoch_approves"] = &mcp::rpc_handler::epoch_approves;
 	m_mcpRpcMethods["approve_receipt"] = &mcp::rpc_handler::approve_receipt;
+	m_mcpRpcMethods["dss_sendMiningPing"] = &mcp::rpc_handler::dss_sendMiningPing;
 
 	m_ethRpcMethods["net_version"] = &mcp::rpc_handler::net_version;
 	m_ethRpcMethods["net_listening"] = &mcp::rpc_handler::net_listening;
@@ -2542,7 +2543,6 @@ void mcp::rpc_handler::get_main_chain_block(mcp::json &j_response, bool &)
 	{
 		BOOST_THROW_EXCEPTION(RPC_Error_InvalidMci());
 	}
-	//uint64_t mci = jsToInt(request["mci"]);
 	uint64_t mci = request["mci"];
 
 	try
@@ -2566,4 +2566,33 @@ void mcp::rpc_handler::get_main_chain_block(mcp::json &j_response, bool &)
 	{
 		j_response["block"] = nullptr;
 	}
+}
+
+void mcp::rpc_handler::dss_sendMiningPing(mcp::json &j_response, bool &async)
+{
+	mcp::json params = request["params"];
+	if (params.size() < 1 || !params[0].is_object())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+	}
+
+	TransactionSkeleton t = mcp::toTransactionSkeletonForEth(params[0]);
+
+	auto rpc_l(shared_from_this());
+	auto fun = [rpc_l, j_response, this](h256 &h, boost::optional<dev::Exception const &> e)
+	{
+		mcp::json j_resp = j_response;
+		if (!e)
+		{
+			j_resp["result"] = toJS(h);
+		}
+		else
+		{
+			toRpcExceptionEthJson(*e, j_resp);
+		}
+		response(j_resp);
+	};
+
+	async = true;
+	m_wallet->send_async(t, fun);
 }

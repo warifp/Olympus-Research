@@ -17,6 +17,15 @@ mcp::approve::approve(Epoch const & _epoch, h648 const & _proof, Secret const& s
 		sign(s);
 }
 
+mcp::approve::approve(DenMiningSkeleton _d, Secret const& _s) :
+	m_chainId(mcp::chain_id)
+{
+	m_type = DENMiningPing;
+	m_den_mining_ping = boost::make_optional<den_mining_ping>(den_mining_ping{_d.mci, _d.hash});
+	if (_s)
+		sign(_s);
+}
+
 mcp::approve::approve(dev::RLP const & rlp, CheckTransaction _checkSig)
 {
     try
@@ -116,6 +125,19 @@ void mcp::approve::streamRLP(RLPStream& s, IncludeSignature sig) const
 		}
 		else  ///rlp for hash and verify sinature
 			s << m_chainId << 0 << 0;
+	}
+	else if(m_den_mining_ping){
+		s.appendList(6);
+		s << m_type << m_den_mining_ping->mci << m_den_mining_ping->hash;
+		if (sig == IncludeSignature::WithSignature) //rlp for p2p and storage
+		{
+			s << rawV() << (u256)m_vrs.r << (u256)m_vrs.s;
+		}
+		else  ///rlp for hash and verify sinature
+			s << m_chainId << 0 << 0;
+	}
+	else{
+		assert(false);
 	}
 }
 

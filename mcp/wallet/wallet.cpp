@@ -6,18 +6,34 @@
 
 mcp::wallet::wallet(
 	mcp::block_store& block_store_a, std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::key_manager> key_manager_a,
-	std::shared_ptr<TransactionQueue> tq
+	std::shared_ptr<TransactionQueue> tq, std::shared_ptr<ApproveQueue> aq
 ) :
 	m_block_store(block_store_a),
 	m_cache(cache_a),
 	m_key_manager(key_manager_a),
 	m_tq(tq),
+	m_aq(aq),
 	m_stopped(false),
 	m_thread([this]() { do_wallet_actions(); })
 {
 }
 
 void mcp::wallet::send_async(TransactionSkeleton t, std::function<void(h256 &, boost::optional<dev::Exception const &>)> const & action_a, boost::optional<std::string> const & password)
+{
+	this->queue_wallet_action([this, t, action_a, password]()// put queue
+	{
+		try {
+			h256 h = send_action(t, password);
+			action_a(h, boost::none);
+		}
+		catch (dev::Exception const & e) {
+			h256 h = h256(0);
+			action_a(h, e);
+		}
+	});
+}
+
+void mcp::wallet::send_async(DenMiningSkeleton t, std::function<void(h256 &, boost::optional<dev::Exception const &>)> const & action_a, boost::optional<std::string> const & password)
 {
 	this->queue_wallet_action([this, t, action_a, password]()// put queue
 	{
@@ -49,6 +65,22 @@ h256 mcp::wallet::send_action(TransactionSkeleton t, boost::optional<std::string
 	}
 }
 
+h256 mcp::wallet::send_action(DenMiningSkeleton t, boost::optional<std::string> const & password)
+{
+	std::pair<bool, Secret> ar = m_key_manager->authenticate(t.from, password);
+	if (!ar.first)
+	{
+		t.from = dev::toAddress(ar.second);
+		approve ts(t, ar.second);
+		return importTransaction(ts);
+	}
+	else
+	{
+		h256 emptyHash;
+		return emptyHash; // TODO: give back something more useful than an empty hash.
+	}
+}
+
 h256 mcp::wallet::importTransaction(Transaction const& _t)
 {
 	ImportResult res = m_tq->importLocal(std::make_shared<Transaction>(_t));
@@ -66,6 +98,24 @@ h256 mcp::wallet::importTransaction(Transaction const& _t)
 		BOOST_THROW_EXCEPTION(PendingTransactionTooMuch());
 	case ImportResult::InvalidNonce:
 		BOOST_THROW_EXCEPTION(InvalidNonce());
+	default:
+		BOOST_THROW_EXCEPTION(UnknownTransactionValidationError());
+	}
+
+	return _t.sha3();
+}
+
+h256 mcp::wallet::importTransaction(approve const& _t)
+{
+	ImportResult res = m_aq->import(std::make_shared<approve>(_t), source::local);
+	switch (res)
+	{
+	case ImportResult::Success:
+		break;
+	case ImportResult::AlreadyKnown:
+		BOOST_THROW_EXCEPTION(PendingTransactionAlreadyExists());
+	case ImportResult::AlreadyInChain:
+		BOOST_THROW_EXCEPTION(TransactionAlreadyInChain());
 	default:
 		BOOST_THROW_EXCEPTION(UnknownTransactionValidationError());
 	}

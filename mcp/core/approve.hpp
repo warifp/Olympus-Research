@@ -11,6 +11,13 @@
 using namespace dev;
 namespace mcp
 {
+	struct DenMiningSkeleton
+	{
+		Address from;
+		uint64_t mci;
+		block_hash hash;
+	};
+
 	struct den_mining_ping{
 		uint64_t mci;
 		block_hash hash;
@@ -36,6 +43,7 @@ namespace mcp
 
 		/// Constructs a transaction from a transaction skeleton & optional secret.
 		approve(Epoch const & _epoch, h648 const & _proof, Secret const& _s);
+		approve(DenMiningSkeleton _d, Secret const& _s);
 
 		/// Constructs a approve from the given RLP.
 		approve(dev::RLP const & r, CheckTransaction _checkSig);

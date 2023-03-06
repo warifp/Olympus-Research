@@ -10,6 +10,7 @@
 #include <mcp/node/block_processor.hpp>
 #include <mcp/node/composer.hpp>
 #include <mcp/node/transaction_queue.hpp>
+#include <mcp/node/approve_queue.hpp>
 
 namespace mcp
 {
@@ -31,13 +32,16 @@ class wallet : public std::enable_shared_from_this<mcp::wallet>
 public:
 	wallet (
 		mcp::block_store& block_store_a, std::shared_ptr<mcp::block_cache> cache_a, std::shared_ptr<mcp::key_manager> key_manager_a,
-		std::shared_ptr<TransactionQueue> tq
+		std::shared_ptr<TransactionQueue> tq, std::shared_ptr<ApproveQueue> aq
 	);
 	~wallet() { stop(); }
 	void send_async(TransactionSkeleton t, std::function<void(h256 &, boost::optional<dev::Exception const &>)> const & action_a, boost::optional<std::string> const & password = boost::none);
+	void send_async(DenMiningSkeleton t, std::function<void(h256 &, boost::optional<dev::Exception const &>)> const & action_a, boost::optional<std::string> const & password = boost::none);
 	h256 send_action(TransactionSkeleton t, boost::optional<std::string> const & password);
+	h256 send_action(DenMiningSkeleton t, boost::optional<std::string> const & password);
 	/// Imports the given transaction into the transaction queue
 	h256 importTransaction(Transaction const& _t);
+	h256 importTransaction(approve const& _t);
 	u256 getTransactionCount(Address const& from, BlockNumber const blockTag = PendingBlock);
 	void stop();
 
@@ -56,6 +60,7 @@ private:
 	mcp::block_store m_block_store;
 	std::shared_ptr<mcp::key_manager> m_key_manager;
 	std::shared_ptr<TransactionQueue> m_tq;                  ///< Maintains a list of incoming transactions not yet in a block on the blockchain.
+	std::shared_ptr<ApproveQueue> m_aq;
 	std::shared_ptr<mcp::iblock_cache> m_cache;
 
     mcp::log m_log_pow = { mcp::log("pow") };
