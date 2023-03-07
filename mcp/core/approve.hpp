@@ -54,6 +54,8 @@ namespace mcp
 		/// Constructs a Transaction from the given RLP.
 		explicit approve(bytes const& _rlp, CheckTransaction _checkSig) : approve(&_rlp, _checkSig) {}
 
+		ApproveType type() const { return m_type; }
+
 		/// @returns sender of the transaction from the signature (and hash).
 		/// @throws TransactionIsUnsigned if signature was not initialized
 		Address const& sender() const;

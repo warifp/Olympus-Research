@@ -2576,7 +2576,7 @@ void mcp::rpc_handler::dss_sendMiningPing(mcp::json &j_response, bool &async)
 		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
 	}
 
-	TransactionSkeleton t = mcp::toTransactionSkeletonForEth(params[0]);
+	DenMiningSkeleton t = mcp::toDenMiningSkeleton(params[0]);
 
 	auto rpc_l(shared_from_this());
 	auto fun = [rpc_l, j_response, this](h256 &h, boost::optional<dev::Exception const &> e)

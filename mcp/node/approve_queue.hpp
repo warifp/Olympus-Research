@@ -112,6 +112,7 @@ namespace mcp
 
 		std::unordered_map<h256, std::shared_ptr<approve>> all;///approve hash -> approve
 		std::map<Epoch, h256Hash> queue;
+		h256Hash m_queue_ping;
 		
 		/// verified broadcast incoming approve
 		std::condition_variable m_queueReady;

@@ -8,6 +8,8 @@
 namespace mcp
 {
 	TransactionSkeleton toTransactionSkeletonForEth(mcp::json const& _json);
+	
+	DenMiningSkeleton toDenMiningSkeleton(mcp::json const& _json);
 
 	inline Address jsToAddress(std::string const& _s) { return jsToFixed<20>(_s); }
 

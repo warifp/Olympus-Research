@@ -902,37 +902,40 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 					assert_x(ap);
 					/// exec approves
 					try{
-						/// exec approve can reduce, if two or more block linked a approve,reduce once.
-						m_store.approve_unstable_count_reduce(transaction_a);
-						//LOG(m_log.debug) << "approve_unstable: reduce " << m_store.approve_unstable_count(transaction_a);
-
-						if (ap->outputs() == h256(0))/// reboot system. approve read from db,but not cache outputs
+						if(ap->type() == mcp::approve::WitnessElection)
 						{
-							mcp::block_hash hash;
-							if (ap->epoch() <= 1) {
-								hash = mcp::genesis::block_hash;
-							}
-							else {
-								bool exists(!m_store.main_chain_get(transaction_a, (ap->epoch() - 1)*epoch_period, hash));
-								assert_x(exists);
-							}
-							ap->vrf_verify(hash);///cached outputs.must successed.
-						}
-						std::shared_ptr<dev::ApproveReceipt> preceipt = std::make_shared<dev::ApproveReceipt>(ap->sender(), ap->outputs());
-						cache_a->approve_receipt_put(transaction_a, approve_hash, preceipt);
-					
-						///the approve which is smaller than the current epoch, is not eligible for election.
-						///Bigger than the present is problematic
-						//LOG(m_log.debug) << "[vrf_outputs] ap epoch:" << ap->epoch() <<",epoch:" << epoch(mci)
-						//	<< ",address:" << preceipt->from().hexPrefixed();
-						if (ap->epoch() == epoch(mci))
-						{
-							vrf_outputs[ap->epoch()].insert(std::make_pair(ap->outputs(), *preceipt));
-						}
+							/// exec approve can reduce, if two or more block linked a approve,reduce once.
+							m_store.approve_unstable_count_reduce(transaction_a);
+							//LOG(m_log.debug) << "approve_unstable: reduce " << m_store.approve_unstable_count(transaction_a);
 
-						RLPStream receiptRLP;
-						preceipt->streamRLP(receiptRLP);
-						receipts.push_back(receiptRLP.out());
+							if (ap->outputs() == h256(0))/// reboot system. approve read from db,but not cache outputs
+							{
+								mcp::block_hash hash;
+								if (ap->epoch() <= 1) {
+									hash = mcp::genesis::block_hash;
+								}
+								else {
+									bool exists(!m_store.main_chain_get(transaction_a, (ap->epoch() - 1)*epoch_period, hash));
+									assert_x(exists);
+								}
+								ap->vrf_verify(hash);///cached outputs.must successed.
+							}
+							std::shared_ptr<dev::ApproveReceipt> preceipt = std::make_shared<dev::ApproveReceipt>(ap->sender(), ap->outputs());
+							cache_a->approve_receipt_put(transaction_a, approve_hash, preceipt);
+						
+							///the approve which is smaller than the current epoch, is not eligible for election.
+							///Bigger than the present is problematic
+							//LOG(m_log.debug) << "[vrf_outputs] ap epoch:" << ap->epoch() <<",epoch:" << epoch(mci)
+							//	<< ",address:" << preceipt->from().hexPrefixed();
+							if (ap->epoch() == epoch(mci))
+							{
+								vrf_outputs[ap->epoch()].insert(std::make_pair(ap->outputs(), *preceipt));
+							}
+
+							RLPStream receiptRLP;
+							preceipt->streamRLP(receiptRLP);
+							receipts.push_back(receiptRLP.out());
+						}
 					}
 					catch (std::exception const& _e)
 					{

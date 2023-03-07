@@ -57,9 +57,15 @@ namespace mcp
 			if (all.count(_approve->sha3()))
 				assert_x(false);
 
-			if (!queue.count(_approve->epoch()))
-				queue[_approve->epoch()] = h256Hash();
-			queue[_approve->epoch()].insert(_approve->sha3());
+			if(_approve->type() == mcp::approve::WitnessElection){
+				if (!queue.count(_approve->epoch()))
+					queue[_approve->epoch()] = h256Hash();
+				queue[_approve->epoch()].insert(_approve->sha3());
+			}
+			else{
+				m_queue_ping.insert(_approve->sha3());
+			}
+
 			all.insert(std::make_pair(_approve->sha3(), _approve));
 			m_known.insert(_approve->sha3());
 
@@ -87,12 +93,18 @@ namespace mcp
 			LOG(m_log.debug) << "remove_WITH_LOCK Approve hash" << _txHash.hex() << "already in all?!";
 			return false;
 		}
-		auto epoch = ap->second->epoch();
-		if (queue.count(epoch))
-		{
-			queue[epoch].erase(_txHash);
-			if (queue[epoch].empty())
-				queue.erase(epoch);
+
+		if(ap->second->type() == mcp::approve::WitnessElection){
+			auto epoch = ap->second->epoch();
+			if (queue.count(epoch))
+			{
+				queue[epoch].erase(_txHash);
+				if (queue[epoch].empty())
+					queue.erase(epoch);
+			}
+		}
+		else{
+			m_queue_ping.erase(_txHash);
 		}
 
 		all.erase(_txHash);
@@ -104,7 +116,7 @@ namespace mcp
 
 	ImportResult ApproveQueue::import(std::shared_ptr<approve> _approve, source _in)
 	{
-		//LOG(m_log.trace) << "[import] in";
+		LOG(m_log.trace) << "[import] in";
 
 		// Check if we already know this approve.
 		h256 h = _approve->sha3();
@@ -192,18 +204,35 @@ namespace mcp
 						return ret;
 			}
 		}
-		return ret;
+		for(auto hash : m_queue_ping)
+		{
+			if (!_avoid.count(hash))
+				ret.push_back(hash);
+				if (ret.size() == _limit)
+					return ret;
+		}
+		return ret;	
 	}
 
 	h256s ApproveQueue::topApproves(unsigned _limit, uint64_t _epoch, h256Hash const& _avoid) const
 	{
 		ReadGuard l(m_lock);
 		h256s ret;
-		if(queue.find(_epoch) == queue.end()) return ret;
-		for (auto cs = queue.at(_epoch).begin(); cs != queue.at(_epoch).end(); ++cs)
+		if(queue.find(_epoch) != queue.end())
 		{
-			if (!_avoid.count(*cs))
-				ret.push_back(*cs);
+			for (auto cs = queue.at(_epoch).begin(); cs != queue.at(_epoch).end(); ++cs)
+			{
+				if (!_avoid.count(*cs))
+					ret.push_back(*cs);
+					if (ret.size() == _limit)
+						return ret;
+			}
+		}
+		
+		for(auto hash : m_queue_ping)
+		{
+			if (!_avoid.count(hash))
+				ret.push_back(hash);
 				if (ret.size() == _limit)
 					return ret;
 		}
@@ -281,24 +310,28 @@ namespace mcp
 	ImportResult ApproveQueue::validateApprove(approve const& _t, source _in){
 		_t.checkChainId(mcp::chain_id);
 		_t.checkLowS();
-		
-		if (_t.epoch() < m_chain->last_stable_epoch() && _in == source::broadcast)
-			return ImportResult::EpochIsTooLow;
-		mcp::db::db_transaction transaction(m_store.create_transaction());
-		mcp::block_hash hash;
-		if(_t.epoch() <= 1){
-			hash = mcp::genesis::block_hash;
+		if(_t.type() == mcp::approve::WitnessElection)
+		{
+			if (_t.epoch() < m_chain->last_stable_epoch() && _in == source::broadcast)
+				return ImportResult::EpochIsTooLow;
+			mcp::db::db_transaction transaction(m_store.create_transaction());
+			mcp::block_hash hash;
+			if(_t.epoch() <= 1){
+				hash = mcp::genesis::block_hash;
+			}
+			else{
+				bool ret = m_store.main_chain_get(transaction, (_t.epoch()-1)*epoch_period, hash);
+				if(ret){
+					LOG(m_log.debug) << "[validateApprove] epoch is too high";
+					//LOG(m_log.debug) << "[validateApprove] hash=" << hash.hex();
+					return ImportResult::EpochIsTooHigh;
+				}
+			}
+			_t.vrf_verify(hash);
 		}
 		else{
-			bool ret = m_store.main_chain_get(transaction, (_t.epoch()-1)*epoch_period, hash);
-			if(ret){
-				LOG(m_log.debug) << "[validateApprove] epoch is too high";
-				//LOG(m_log.debug) << "[validateApprove] hash=" << hash.hex();
-				return ImportResult::EpochIsTooHigh;
-			}
+
 		}
-		
-		_t.vrf_verify(hash);
 		return ImportResult::Success;
 	}
 
@@ -308,7 +341,8 @@ namespace mcp
 		std::string str = "ApproveQueue all:" + std::to_string(all.size())
 			+ " ,m_unverified:" + std::to_string(m_unverified.size())
 			+ " ,m_known:" + std::to_string(m_known.size())
-			+ " ,m_dropped:" + std::to_string(m_dropped.size());
+			+ " ,m_dropped:" + std::to_string(m_dropped.size())
+			+ " ,m_queue_ping:" + std::to_string(m_queue_ping.size());
 		if(queue.size() > 0){
 			str += " current[";
 			for(auto current : queue){

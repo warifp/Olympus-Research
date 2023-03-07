@@ -59,6 +59,33 @@ namespace mcp
 		return ret;
 	}
 
+	DenMiningSkeleton toDenMiningSkeleton(mcp::json const& _json)
+	{
+		DenMiningSkeleton ret;
+		ret.from.clear();
+
+		if (!_json.is_object() || _json.empty())
+			return ret;
+
+		if (_json.count("from") && !_json["from"].empty() && _json["from"].is_string()) {
+			try {
+				ret.from = jsToAddress(_json["from"]);
+			}
+			catch (...) {
+				BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidAccountFrom());
+			}
+		}
+
+		if (_json.count("mci") && !_json["mci"].empty() && _json["mci"].is_string()) {
+			ret.mci = jsToInt(_json["mci"]);
+		}
+
+		if (_json.count("hash") && !_json["hash"].empty() && _json["hash"].is_string())
+			ret.hash = jsToHash(_json["hash"]);
+
+		return ret;
+	}
+
 	mcp::json toJson(Transaction const& _t)
 	{
 		mcp::json res;
