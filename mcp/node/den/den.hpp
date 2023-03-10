@@ -51,12 +51,14 @@ namespace mcp
     class den
     {
     public:
-        den(){}
+        den();
         void handle_den_mining_event(const log_entries &log_a);
         void handle_den_mining_ping(const dev::Address &addr, const uint32_t &time);
         bool calculate_rewards(const dev::Address &addr, const uint32_t time, dev::u256 &give_rewards, dev::u256 &frozen_rewards, bool provide);
         void set_cur_time(const uint32_t &time);
         void set_mc_block_time(const uint32_t &time, const block_hash &h);
+        bool is_mining(const dev::Address &addr){ return m_dens.find(addr) != m_dens.end(); }
+        uint32_t last_ping_time(const dev::Address &addr);
     
     private:
         void set_max_stake(const dev::u256 &v);

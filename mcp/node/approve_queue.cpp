@@ -116,8 +116,6 @@ namespace mcp
 
 	ImportResult ApproveQueue::import(std::shared_ptr<approve> _approve, source _in)
 	{
-		LOG(m_log.trace) << "[import] in";
-
 		// Check if we already know this approve.
 		h256 h = _approve->sha3();
 
@@ -330,7 +328,54 @@ namespace mcp
 			_t.vrf_verify(hash);
 		}
 		else{
+			mcp::db::db_transaction transaction(m_store.create_transaction());
+			mcp::block_hash block_hash;
+			if(!m_chain->m_den.is_mining(_t.sender())){
+				LOG(m_log.error) << "[validateApprove] sender is not mining";
+				return ImportResult::Malformed;
+			}
 
+			if (m_store.main_chain_get(transaction, _t.mci(), block_hash))
+			{
+				LOG(m_log.error) << "[validateApprove] faile to get mc's hash.";
+				return ImportResult::Malformed;
+			}
+			if(block_hash != _t.hash()){
+				LOG(m_log.error) << "[validateApprove] The hash value is incorrect.";
+				return ImportResult::Malformed;
+			}
+			std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, block_hash));
+			if(m_chain->cur_stable_time() > mc_block->exec_timestamp() + 3600){
+				LOG(m_log.error) << "[validateApprove] ping's time is too late.";
+				return ImportResult::Malformed;
+			}
+			LOG(m_log.info) << "[validateApprove] sender=" << *(uint16_t *)_t.sender().data() << " hash=" << *(uint16_t *)_t.hash().data();
+			LOG(m_log.info) << " xor=" << (*(uint16_t *)_t.sender().data() ^ *(uint16_t *)_t.hash().data());
+			if((*(uint16_t *)_t.sender().data() ^ *(uint16_t *)_t.hash().data()) < 65536/25){
+				LOG(m_log.info) << "[validateApprove] random is match";
+			}else
+			{
+				//if continue not ping 100 times, need ping
+				if(mc_block->exec_timestamp()/3600 - m_chain->m_den.last_ping_time(_t.sender())/3600 == 100){
+					LOG(m_log.debug) << "[validateApprove] No ping 100 hours and need send now";
+				}
+				else
+				{
+					LOG(m_log.error) << "[validateApprove] No ping's time less than 100 hours.";
+					return ImportResult::Malformed;
+				}
+			}
+
+			if(m_chain->m_hour_block.count(mc_block->exec_timestamp()/3600)){
+				if(block_hash != m_chain->m_hour_block[mc_block->exec_timestamp()/3600]){
+					LOG(m_log.error) << "[validateApprove] hash mismatch.";
+					return ImportResult::Malformed;
+				}
+			}
+			else{
+				LOG(m_log.error) << "[validateApprove] block and hour not match";
+				return ImportResult::Malformed;
+			}
 		}
 		return ImportResult::Success;
 	}

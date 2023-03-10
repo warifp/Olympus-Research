@@ -936,6 +936,9 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 							preceipt->streamRLP(receiptRLP);
 							receipts.push_back(receiptRLP.out());
 						}
+						else{
+							LOG(m_log.info) << "[advance_stable_mci] DENMiningPing in";
+						}
 					}
 					catch (std::exception const& _e)
 					{
@@ -951,6 +954,13 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 				//mcp::stopwatch_guard sw("advance_stable_mci2_2");
 				set_block_stable(timeout_tx_a, cache_a, dag_stable_block_hash, mci, mc_timestamp, mc_last_summary_mci, stable_timestamp, m_last_stable_index_internal, receiptsRoot);
 			}
+		}
+	}
+	if(m_hour_block.find(mc_timestamp/3600) == m_hour_block.end()){
+		m_hour_block[mc_timestamp/3600] = mc_stable_hash;
+		LOG(m_log.info) << "[advance_stable_mci] mc_stable_hash:" << mc_stable_hash.hexPrefixed() << "mci=" << mci;
+		if(m_hour_block.size() > 100){
+			m_hour_block.erase(m_hour_block.begin());
 		}
 	}
 }

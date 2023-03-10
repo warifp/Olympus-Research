@@ -99,6 +99,9 @@ namespace mcp
 		
 		Epoch epoch() const { assert(m_type == WitnessElection); return m_witnessElection->m_epoch; }
 		h648 proof() const { assert(m_type == WitnessElection); return m_witnessElection->m_proof; }
+
+		uint64_t mci() const { assert(m_type == DENMiningPing); return m_den_mining_ping->mci; }
+		block_hash hash() const { assert(m_type == DENMiningPing); return m_den_mining_ping->hash; }
 		
 	private:
 		ApproveType m_type;

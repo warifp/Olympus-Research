@@ -227,6 +227,7 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 	m_mcpRpcMethods["epoch_approves"] = &mcp::rpc_handler::epoch_approves;
 	m_mcpRpcMethods["approve_receipt"] = &mcp::rpc_handler::approve_receipt;
 	m_mcpRpcMethods["dss_sendMiningPing"] = &mcp::rpc_handler::dss_sendMiningPing;
+	m_mcpRpcMethods["dss_sendRawMiningPing"] = &mcp::rpc_handler::dss_sendRawMiningPing;
 
 	m_ethRpcMethods["net_version"] = &mcp::rpc_handler::net_version;
 	m_ethRpcMethods["net_listening"] = &mcp::rpc_handler::net_listening;
@@ -2595,4 +2596,23 @@ void mcp::rpc_handler::dss_sendMiningPing(mcp::json &j_response, bool &async)
 
 	async = true;
 	m_wallet->send_async(t, fun);
+}
+
+void mcp::rpc_handler::dss_sendRawMiningPing(mcp::json &j_response, bool &async)
+{
+	mcp::json params = request["params"];
+	if (params.size() < 1 || !params[0].is_string())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+	}
+
+	try
+	{
+		approve t(jsToBytes(params[0], OnFailed::Throw), CheckTransaction::None);
+		j_response["result"] = toJS(m_wallet->importTransaction(t));
+	}
+	catch (dev::Exception &e)
+	{
+		toRpcExceptionEthJson(e, j_response);
+	}
 }

@@ -83,6 +83,9 @@ namespace mcp
 
 		Epoch last_epoch();
 		Epoch last_stable_epoch();
+		uint32_t cur_stable_time() {return 11;}
+        std::map<uint32_t, block_hash> m_hour_block; //<hour, hash>
+		den m_den;
 
 	private:
 		void write_dag_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a);
@@ -121,7 +124,6 @@ namespace mcp
 		Signal<uint64_t const&> m_onMciStable; ///<  Called when a subsequent call to import transactions and ready.
 
 		Address m_den_mining_contract;
-		den m_den;
 
         mcp::log m_log = { mcp::log("node") };
 	};

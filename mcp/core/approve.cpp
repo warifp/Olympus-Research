@@ -66,7 +66,35 @@ mcp::approve::approve(dev::RLP const & rlp, CheckTransaction _checkSig)
 				m_sender = sender();
 		}
 		else if(DENMiningPing == m_type){
+			if (rlp.itemCount() != 6)
+			BOOST_THROW_EXCEPTION(InvalidTransactionFormat() << errinfo_comment("too many or to low fields in the transaction RLP"));
 
+			m_den_mining_ping = boost::make_optional<den_mining_ping>(den_mining_ping{rlp[1].toInt<uint64_t>(), (block_hash)rlp[2]});
+
+			u256 const v = rlp[3].toInt<u256>();
+			h256 const r = rlp[4].toInt<u256>();
+			h256 const s = rlp[5].toInt<u256>();
+
+			if (v > 36)
+			{
+				auto const chainId = (v - 35) / 2;
+				if (chainId > std::numeric_limits<uint64_t>::max())
+					BOOST_THROW_EXCEPTION(InvalidSignature());
+				m_chainId = static_cast<uint64_t>(chainId);
+			}
+        	// not support non-replay protected approves
+			else if (v != 27 && v != 28)
+				BOOST_THROW_EXCEPTION(InvalidSignature());
+
+			auto const recoveryID = byte(v - (u256(m_chainId) *2 + 35));
+			m_vrs = SignatureStruct{ r, s, recoveryID };
+
+			///check signature valid if broadcast
+			if (_checkSig >= CheckTransaction::Cheap && !m_vrs.isValid())
+				BOOST_THROW_EXCEPTION(InvalidSignature());
+
+			if (_checkSig == CheckTransaction::Everything)
+				m_sender = sender();
 		}
 		else{
 			assert(false);
@@ -137,6 +165,7 @@ void mcp::approve::streamRLP(RLPStream& s, IncludeSignature sig) const
 			s << m_chainId << 0 << 0;
 	}
 	else{
+		LOG(g_log.error) << "[streamRLP] TYPE ERROR" ;
 		assert(false);
 	}
 }

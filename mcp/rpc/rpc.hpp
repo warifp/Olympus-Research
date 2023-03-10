@@ -160,6 +160,7 @@ public:
 	void approve_receipt(mcp::json &j_response, bool &);
 	void get_main_chain_block(mcp::json &j_response, bool &);
 	void dss_sendMiningPing(mcp::json &j_response, bool &);
+	void dss_sendRawMiningPing(mcp::json &j_response, bool &);
 
 	std::string body;
 	mcp::rpc & rpc;

@@ -72,6 +72,7 @@ h256 mcp::wallet::send_action(DenMiningSkeleton t, boost::optional<std::string> 
 	{
 		t.from = dev::toAddress(ar.second);
 		approve ts(t, ar.second);
+		LOG(m_log.info) << "Den mining send_action:" << toHexPrefixed(ts.rlp());
 		return importTransaction(ts);
 	}
 	else

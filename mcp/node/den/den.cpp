@@ -1,6 +1,13 @@
 #include "den.hpp"
 #include <algorithm>
+#include "mcp/rpc/jsonHelper.hpp"
 
+mcp::den::den()
+{
+    unit u;
+    dev::Address a;
+    m_dens.emplace(jsToAddress("0x1144B522F45265C2DFDBAEE8E324719E63A1694C"), u);
+}
 
 void mcp::den::set_max_stake(const dev::u256 &v)
 {
@@ -183,4 +190,12 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint32_t time, 
     else{
         return false;
     }
+}
+
+uint32_t mcp::den::last_ping_time(const dev::Address &addr)
+{
+    auto it = m_dens.find(addr);
+    assert_x(it!=m_dens.end());
+
+    return it->second.last_ping_time;
 }
