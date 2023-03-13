@@ -63,27 +63,27 @@ void mcp::den::handle_den_mining_ping(const dev::Address &addr, const uint32_t &
     if(m_dens.count(addr) == 0) return;
     auto &u = m_dens[addr];
     auto &pings = m_dens[addr].pings;
-    uint32_t day = time / (3600 * 24);
-    uint32_t hour = time / 3600 % 24 + 1;
+    uint32_t day = time / (den_reward_period * 24);
+    uint32_t hour = time / den_reward_period % 24 + 1;
     pings[day][hour] = {time, true};
 
-    uint16_t shift = *(uint16_t *)addr.data() % 3600;
+    uint16_t shift = *(uint16_t *)addr.data() % den_reward_period;
     auto it=m_time_block.find(u.last_ping_time);
-    uint32_t time_old = (it->first + shift) / 3600 * 3600;
+    uint32_t time_old = (it->first + shift) / den_reward_period * den_reward_period;
     it++;
     for(uint n=1; (it->first + shift) < time; it++){
-        if((it->first + shift) > time_old + 3600*n){
-            n += ((it->first + shift) - time_old + 3600*n) / 3600 + 1;
+        if((it->first + shift) > time_old + den_reward_period*n){
+            n += ((it->first + shift) - time_old + den_reward_period*n) / den_reward_period + 1;
             if(*(uint16_t *)addr.data() ^ *(uint16_t *)it->second.data() < 65536/25) //need ping
             {
-                pings[it->first / ( 3600 * 24)][it->first / 3600 % 24 + 1] = {time, false};
+                pings[it->first / ( den_reward_period * 24)][it->first / den_reward_period % 24 + 1] = {time, false};
                 u.no_ping_times = 0;
             }
             else{
                 u.no_ping_times++;
                 if(u.no_ping_times >= 100){
                     u.no_ping_times = 0;
-                    pings[it->first / ( 3600 * 24)][it->first / 3600 % 24 + 1] = {time, false};
+                    pings[it->first / ( den_reward_period * 24)][it->first / den_reward_period % 24 + 1] = {time, false};
                 }
             }
         }
@@ -95,7 +95,7 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint32_t time, 
 {
     if(m_dens.count(addr)){
         auto &u = m_dens[addr];
-        uint32_t cur_day = time/(3600 * 24);
+        uint32_t cur_day = time/(den_reward_period * 24);
         if(cur_day <= u.last_calc_day){ //The call interval needs more than one day.
             return false;
         }

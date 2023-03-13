@@ -12,6 +12,7 @@
 
 namespace mcp
 {
+    const uint32_t den_reward_period = 60; //default 3600 second = 1 hour
     struct mining_ping
     {
         //uint64_t mci;

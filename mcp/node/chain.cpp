@@ -956,8 +956,8 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 			}
 		}
 	}
-	if(m_hour_block.find(mc_timestamp/3600) == m_hour_block.end()){
-		m_hour_block[mc_timestamp/3600] = mc_stable_hash;
+	if(m_hour_block.find(mc_timestamp/den_reward_period) == m_hour_block.end()){
+		m_hour_block[mc_timestamp/den_reward_period] = mc_stable_hash;
 		LOG(m_log.info) << "[advance_stable_mci] mc_stable_hash:" << mc_stable_hash.hexPrefixed() << "mci=" << mci;
 		if(m_hour_block.size() > 100){
 			m_hour_block.erase(m_hour_block.begin());

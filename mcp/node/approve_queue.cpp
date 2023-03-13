@@ -345,18 +345,73 @@ namespace mcp
 				return ImportResult::Malformed;
 			}
 			std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, block_hash));
-			if(m_chain->cur_stable_time() > mc_block->exec_timestamp() + 3600){
+			if(m_chain->cur_stable_time() > mc_block->exec_timestamp() + den_reward_period){
 				LOG(m_log.error) << "[validateApprove] ping's time is too late.";
 				return ImportResult::Malformed;
 			}
 			LOG(m_log.info) << "[validateApprove] sender=" << *(uint16_t *)_t.sender().data() << " hash=" << *(uint16_t *)_t.hash().data();
 			LOG(m_log.info) << " xor=" << (*(uint16_t *)_t.sender().data() ^ *(uint16_t *)_t.hash().data());
+
+			#if 1
+			auto it = m_chain->m_hour_block.find(mc_block->exec_timestamp()/den_reward_period);
+			if(it == m_chain->m_hour_block.end()){
+				LOG(m_log.error) << "[validateApprove] block and hour not match";
+				return ImportResult::Malformed;
+			}
+
+			#if 0
+			if((*(uint16_t *)_t.sender().data() ^ *(uint16_t *)it->second.data()) < 65536/25){
+				LOG(m_log.info) << "[validateApprove] random is match";
+			}else
+			{
+				//if continue not ping 100 times, need ping
+				if(mc_block->exec_timestamp()/den_reward_period - m_chain->m_den.last_ping_time(_t.sender())/den_reward_period == 100){
+					LOG(m_log.debug) << "[validateApprove] No ping 100 hours and need send now";
+				}
+				else
+				{
+					LOG(m_log.error) << "[validateApprove] No ping's time less than 100 hours.";
+					return ImportResult::Malformed;
+				}
+			}
+			#endif
+
+			if(mc_block->exec_timestamp()%den_reward_period >= (*(uint16_t *)_t.sender().data())%den_reward_period){
+				std::shared_ptr<mcp::block> mc_block_previous(m_cache->block_get(transaction, mc_block->previous()));
+				LOG(m_log.debug) << "[validateApprove] pre h:" << mc_block_previous->exec_timestamp()/den_reward_period << " h:" << mc_block->exec_timestamp()/den_reward_period << "pre yusu:" << mc_block_previous->exec_timestamp()%den_reward_period << "addr yusu" << (*(uint16_t *)_t.sender().data())%den_reward_period;
+				if((mc_block_previous->exec_timestamp()/den_reward_period < mc_block->exec_timestamp()/den_reward_period) || (mc_block_previous->exec_timestamp()%den_reward_period < (*(uint16_t *)_t.sender().data())%den_reward_period)){
+					LOG(m_log.debug) << "[validateApprove] time is ok";
+				}
+				else{
+					LOG(m_log.error) << "[validateApprove] fail to check time.";
+					return ImportResult::Malformed;
+				}
+			}
+			else{
+				mcp::block_hash block_hash_next;
+				if (m_store.main_chain_get(transaction, _t.mci()+1, block_hash_next))
+				{
+					LOG(m_log.error) << "[validateApprove] faile to get mc's hash.";
+					return ImportResult::Malformed;
+				}
+				std::shared_ptr<mcp::block> mc_block_next(m_cache->block_get(transaction, block_hash_next));
+				LOG(m_log.debug) << "[validateApprove] nex h:" << mc_block_next->exec_timestamp()/den_reward_period << "h:" << mc_block->exec_timestamp()/den_reward_period;
+				if(mc_block_next->exec_timestamp()/den_reward_period > mc_block->exec_timestamp()/den_reward_period){
+					LOG(m_log.debug) << "[validateApprove] time is ok2";
+				}
+				else{
+					LOG(m_log.error) << "[validateApprove] fail to check time2.";
+					return ImportResult::Malformed;
+				}
+			}
+			#else
+
 			if((*(uint16_t *)_t.sender().data() ^ *(uint16_t *)_t.hash().data()) < 65536/25){
 				LOG(m_log.info) << "[validateApprove] random is match";
 			}else
 			{
 				//if continue not ping 100 times, need ping
-				if(mc_block->exec_timestamp()/3600 - m_chain->m_den.last_ping_time(_t.sender())/3600 == 100){
+				if(mc_block->exec_timestamp()/den_reward_period - m_chain->m_den.last_ping_time(_t.sender())/den_reward_period == 100){
 					LOG(m_log.debug) << "[validateApprove] No ping 100 hours and need send now";
 				}
 				else
@@ -366,8 +421,8 @@ namespace mcp
 				}
 			}
 
-			if(m_chain->m_hour_block.count(mc_block->exec_timestamp()/3600)){
-				if(block_hash != m_chain->m_hour_block[mc_block->exec_timestamp()/3600]){
+			if(m_chain->m_hour_block.count(mc_block->exec_timestamp()/den_reward_period)){
+				if(block_hash != m_chain->m_hour_block[mc_block->exec_timestamp()/den_reward_period]){
 					LOG(m_log.error) << "[validateApprove] hash mismatch.";
 					return ImportResult::Malformed;
 				}
@@ -376,6 +431,7 @@ namespace mcp
 				LOG(m_log.error) << "[validateApprove] block and hour not match";
 				return ImportResult::Malformed;
 			}
+			#endif
 		}
 		return ImportResult::Success;
 	}
