@@ -42,7 +42,8 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	approve_receipt(0),
 	epoch_approves(0),
 	epoch_param(0),
-	transaction_account_state(0)
+	transaction_account_state(0),
+	den_period_mc(0)
 {
 	if (error_a)
 		return;
@@ -91,6 +92,7 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	epoch_approves = m_db->set_column_family(default_col, "031");
 	epoch_param = m_db->set_column_family(default_col, "032");
 	transaction_account_state = m_db->set_column_family(default_col, "033");
+	den_period_mc = m_db->set_column_family(default_col, "034");
 
 	//use iterator
 	dag_free = m_db->set_column_family(default_col, "101");
@@ -1154,6 +1156,24 @@ void mcp::block_store::transaction_previous_account_state_put(mcp::db::db_transa
 	
 	dev::Slice s_value((char *)b_value.data(), b_value.size());
 	transaction_a.put(transaction_account_state, mcp::h256_to_slice(link_a), s_value);
+}
+
+bool mcp::block_store::den_period_mc_get(mcp::db::db_transaction & transaction_a, uint32_t const & hour, mcp::block_hash & hash_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
+{
+	std::string value;
+	dev::h64 h(hour);
+	bool exists(transaction_a.get(den_period_mc, mcp::h64_to_slice(h), value, snapshot_a));
+	if (exists)
+	{
+		hash_a = mcp::slice_to_h256(value);
+	}
+	return !exists;
+}
+
+void mcp::block_store::den_period_mc_put(mcp::db::db_transaction & transaction_a, uint32_t const & hour, mcp::block_hash const & hash_a)
+{
+	dev::h64 h(hour);
+	transaction_a.put(den_period_mc, mcp::h64_to_slice(h), mcp::h256_to_slice(hash_a));
 }
 
 

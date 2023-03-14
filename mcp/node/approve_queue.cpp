@@ -345,22 +345,25 @@ namespace mcp
 				return ImportResult::Malformed;
 			}
 			std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, block_hash));
+			#if 0
 			if(m_chain->cur_stable_time() > mc_block->exec_timestamp() + den_reward_period){
 				LOG(m_log.error) << "[validateApprove] ping's time is too late.";
 				return ImportResult::Malformed;
 			}
+			#endif
 			LOG(m_log.info) << "[validateApprove] sender=" << *(uint16_t *)_t.sender().data() << " hash=" << *(uint16_t *)_t.hash().data();
 			LOG(m_log.info) << " xor=" << (*(uint16_t *)_t.sender().data() ^ *(uint16_t *)_t.hash().data());
 
 			#if 1
-			auto it = m_chain->m_hour_block.find(mc_block->exec_timestamp()/den_reward_period);
-			if(it == m_chain->m_hour_block.end()){
-				LOG(m_log.error) << "[validateApprove] block and hour not match";
+			uint32_t hour = mc_block->exec_timestamp()/den_reward_period;
+			mcp::block_hash hour_hash;
+			if(m_store.den_period_mc_get(transaction, hour, hour_hash)){
+				LOG(m_log.error) << "[validateApprove] can't get hour's hash";
 				return ImportResult::Malformed;
 			}
 
-			#if 0
-			if((*(uint16_t *)_t.sender().data() ^ *(uint16_t *)it->second.data()) < 65536/25){
+			#if 1
+			if((*(uint16_t *)_t.sender().data() ^ *(uint16_t *)hour_hash.data()) < 65536/25){
 				LOG(m_log.info) << "[validateApprove] random is match";
 			}else
 			{
@@ -419,17 +422,6 @@ namespace mcp
 					LOG(m_log.error) << "[validateApprove] No ping's time less than 100 hours.";
 					return ImportResult::Malformed;
 				}
-			}
-
-			if(m_chain->m_hour_block.count(mc_block->exec_timestamp()/den_reward_period)){
-				if(block_hash != m_chain->m_hour_block[mc_block->exec_timestamp()/den_reward_period]){
-					LOG(m_log.error) << "[validateApprove] hash mismatch.";
-					return ImportResult::Malformed;
-				}
-			}
-			else{
-				LOG(m_log.error) << "[validateApprove] block and hour not match";
-				return ImportResult::Malformed;
 			}
 			#endif
 		}

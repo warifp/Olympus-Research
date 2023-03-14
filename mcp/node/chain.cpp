@@ -956,12 +956,12 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 			}
 		}
 	}
-	if(m_hour_block.find(mc_timestamp/den_reward_period) == m_hour_block.end()){
-		m_hour_block[mc_timestamp/den_reward_period] = mc_stable_hash;
-		LOG(m_log.info) << "[advance_stable_mci] mc_stable_hash:" << mc_stable_hash.hexPrefixed() << "mci=" << mci;
-		if(m_hour_block.size() > 100){
-			m_hour_block.erase(m_hour_block.begin());
-		}
+	m_cur_stable_time = mc_timestamp;
+	uint32_t hour;
+	mcp::block_hash hash;
+	if(m_store.den_period_mc_get(transaction_a, mc_timestamp/den_reward_period, hash)){
+		m_store.den_period_mc_put(transaction_a, mc_timestamp/den_reward_period, mc_stable_hash);
+		LOG(m_log.info) << "[advance_stable_mci] den_period_mc_put hour " << mc_timestamp/den_reward_period << "hash=" << mc_stable_hash.hexPrefixed();
 	}
 }
 

@@ -174,6 +174,9 @@ namespace mcp
 
 		bool transaction_previous_account_state_get(mcp::db::db_transaction & transaction_a, dev::h256 const & link_a, std::vector<h256> & hashs_a);
 		void transaction_previous_account_state_put(mcp::db::db_transaction & transaction_a, dev::h256 const & link_a, std::vector<h256> & hashs_a);
+		
+		bool den_period_mc_get(mcp::db::db_transaction & transaction_a, uint32_t const & hour, mcp::block_hash & hash_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
+		void den_period_mc_put(mcp::db::db_transaction & transaction_a, uint32_t const & hour, mcp::block_hash const & hash_a);
 
 		mcp::db::db_transaction create_transaction(std::shared_ptr<rocksdb::WriteOptions> write_options_a = nullptr,
 			std::shared_ptr<rocksdb::TransactionOptions> txn_ops_a = nullptr)
@@ -260,6 +263,9 @@ namespace mcp
 		int epoch_param;
 
 		int transaction_account_state;
+		
+		//hour -> main chain block hash
+		int den_period_mc;
 
 		//genesis hash key
 		static dev::h256 const genesis_hash_key;
