@@ -354,18 +354,18 @@ namespace mcp
 			LOG(m_log.info) << "[validateApprove] sender=" << *(uint16_t *)_t.sender().data() << " hash=" << *(uint16_t *)_t.hash().data();
 			LOG(m_log.info) << " xor=" << (*(uint16_t *)_t.sender().data() ^ *(uint16_t *)_t.hash().data());
 
-			#if 1
 			uint32_t hour = mc_block->exec_timestamp()/den_reward_period;
 			mcp::block_hash hour_hash;
 			if(m_store.den_period_mc_get(transaction, hour, hour_hash)){
 				LOG(m_log.error) << "[validateApprove] can't get hour's hash";
 				return ImportResult::Malformed;
 			}
+			LOG(m_log.error) << "[validateApprove] get hour" << hour << "\'s hash: " << hour_hash.hexPrefixed();
 
-			#if 1
-			if((*(uint16_t *)_t.sender().data() ^ *(uint16_t *)hour_hash.data()) < 65536/25){
+        	if(den::need_ping(_t.sender(), hour_hash)){
 				LOG(m_log.info) << "[validateApprove] random is match";
-			}else
+			}
+			else
 			{
 				//if continue not ping 100 times, need ping
 				if(mc_block->exec_timestamp()/den_reward_period - m_chain->m_den.last_ping_time(_t.sender())/den_reward_period == 100){
@@ -377,7 +377,6 @@ namespace mcp
 					return ImportResult::Malformed;
 				}
 			}
-			#endif
 
 			if(mc_block->exec_timestamp()%den_reward_period >= (*(uint16_t *)_t.sender().data())%den_reward_period){
 				std::shared_ptr<mcp::block> mc_block_previous(m_cache->block_get(transaction, mc_block->previous()));
@@ -407,23 +406,6 @@ namespace mcp
 					return ImportResult::Malformed;
 				}
 			}
-			#else
-
-			if((*(uint16_t *)_t.sender().data() ^ *(uint16_t *)_t.hash().data()) < 65536/25){
-				LOG(m_log.info) << "[validateApprove] random is match";
-			}else
-			{
-				//if continue not ping 100 times, need ping
-				if(mc_block->exec_timestamp()/den_reward_period - m_chain->m_den.last_ping_time(_t.sender())/den_reward_period == 100){
-					LOG(m_log.debug) << "[validateApprove] No ping 100 hours and need send now";
-				}
-				else
-				{
-					LOG(m_log.error) << "[validateApprove] No ping's time less than 100 hours.";
-					return ImportResult::Malformed;
-				}
-			}
-			#endif
 		}
 		return ImportResult::Success;
 	}

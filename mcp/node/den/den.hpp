@@ -52,14 +52,15 @@ namespace mcp
     class den
     {
     public:
-        den();
+        den(mcp::block_store& store_a);
         void handle_den_mining_event(const log_entries &log_a);
-        void handle_den_mining_ping(const dev::Address &addr, const uint32_t &time);
+        void handle_den_mining_ping(mcp::db::db_transaction & transaction_a, const dev::Address &addr, const uint32_t &time);
         bool calculate_rewards(const dev::Address &addr, const uint32_t time, dev::u256 &give_rewards, dev::u256 &frozen_rewards, bool provide);
         void set_cur_time(const uint32_t &time);
         void set_mc_block_time(const uint32_t &time, const block_hash &h);
         bool is_mining(const dev::Address &addr){ return m_dens.find(addr) != m_dens.end(); }
         uint32_t last_ping_time(const dev::Address &addr);
+        static bool need_ping(const dev::Address &addr, const block_hash &h);
     
     private:
         void set_max_stake(const dev::u256 &v);
@@ -71,8 +72,8 @@ namespace mcp
 
         den_param m_param;
         std::unordered_map<dev::Address, unit> m_dens;
-        std::map<uint32_t, block_hash> m_time_block; //<time, hash>
         
+		mcp::block_store & m_store;
         mcp::log m_log = { mcp::log("node") };
     };
 }

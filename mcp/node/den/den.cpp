@@ -2,7 +2,8 @@
 #include <algorithm>
 #include "mcp/rpc/jsonHelper.hpp"
 
-mcp::den::den()
+mcp::den::den(mcp::block_store& store_a) :
+    m_store(store_a)
 {
     unit u;
     dev::Address a;
@@ -46,7 +47,7 @@ void mcp::den::set_cur_time(const uint32_t &time)
 
 void mcp::den::set_mc_block_time(const uint32_t &time, const block_hash &h)
 {
-    m_time_block[time] = h;
+    //m_time_block[time] = h;
 }
 
 void mcp::den::handle_den_mining_event(const log_entries &log_a)
@@ -58,33 +59,31 @@ void mcp::den::handle_den_mining_event(const log_entries &log_a)
 }
 
 // time in the block which include ping approve.
-void mcp::den::handle_den_mining_ping(const dev::Address &addr, const uint32_t &time)
+void mcp::den::handle_den_mining_ping(mcp::db::db_transaction & transaction_a, const dev::Address &addr, const uint32_t &time)
 {
+    LOG(m_log.info) << "handle_den_mining_ping in " << addr.hexPrefixed() << " time:" << time;
     if(m_dens.count(addr) == 0) return;
     auto &u = m_dens[addr];
     auto &pings = m_dens[addr].pings;
-    uint32_t day = time / (den_reward_period * 24);
-    uint32_t hour = time / den_reward_period % 24 + 1;
+    uint32_t day = time / den_reward_period / 24;
+    uint32_t hour = time / den_reward_period % 24;
     pings[day][hour] = {time, true};
-
-    uint16_t shift = *(uint16_t *)addr.data() % den_reward_period;
-    auto it=m_time_block.find(u.last_ping_time);
-    uint32_t time_old = (it->first + shift) / den_reward_period * den_reward_period;
-    it++;
-    for(uint n=1; (it->first + shift) < time; it++){
-        if((it->first + shift) > time_old + den_reward_period*n){
-            n += ((it->first + shift) - time_old + den_reward_period*n) / den_reward_period + 1;
-            if(*(uint16_t *)addr.data() ^ *(uint16_t *)it->second.data() < 65536/25) //need ping
-            {
-                pings[it->first / ( den_reward_period * 24)][it->first / den_reward_period % 24 + 1] = {time, false};
+    for(uint32_t h=u.last_ping_time/den_reward_period+1; h<time/den_reward_period; h++){
+        mcp::block_hash hash;
+        bool ret = m_store.den_period_mc_get(transaction_a, h, hash);
+        if(ret){
+            continue;
+        }
+        if(need_ping(addr, hash)) //need ping
+        {
+            pings[h / 24][h % 24] = {time, false};
+            u.no_ping_times = 0;
+        }
+        else{
+            u.no_ping_times++;
+            if(u.no_ping_times >= 100){
                 u.no_ping_times = 0;
-            }
-            else{
-                u.no_ping_times++;
-                if(u.no_ping_times >= 100){
-                    u.no_ping_times = 0;
-                    pings[it->first / ( den_reward_period * 24)][it->first / den_reward_period % 24 + 1] = {time, false};
-                }
+                pings[h / 24][h % 24] = {time, false};
             }
         }
     }
@@ -95,7 +94,7 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint32_t time, 
 {
     if(m_dens.count(addr)){
         auto &u = m_dens[addr];
-        uint32_t cur_day = time/(den_reward_period * 24);
+        uint32_t cur_day = time / den_reward_period / 24;
         if(cur_day <= u.last_calc_day){ //The call interval needs more than one day.
             return false;
         }
@@ -119,13 +118,19 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint32_t time, 
                         all_reward += full_reward*24;
                     }
                 }
+                else{
+                    if(u.online_score > 10000*24/72){
+                        u.online_score -= 10000*24/72;
+                    }
+                    else u.online_score = 0; 
+                }
             }
             else
             {
                 uint8_t hour_last = 0;
                 uint8_t now;
                 std::map<uint8_t, mining_ping>::iterator it2;
-                for(it2=it->second.begin(), now=it2->first; now <= 24;){
+                for(it2=it->second.begin(), now=it2->first; now <= 23;){
                     if(last_receive){
                         if(u.online_score < 10000){
                             uint32_t score = 0;
@@ -138,6 +143,12 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint32_t time, 
                         else{
                             all_reward += full_reward*(now-hour_last);
                         }
+                    }
+                    else{
+                        if(u.online_score > 10000/72){
+                            u.online_score -= 10000/72;
+                        }
+                        else u.online_score = 0;
                     }
 
                     last_receive = it2->second.receive;
@@ -198,4 +209,11 @@ uint32_t mcp::den::last_ping_time(const dev::Address &addr)
     assert_x(it!=m_dens.end());
 
     return it->second.last_ping_time;
+}
+
+bool mcp::den::need_ping(const dev::Address &addr, const block_hash &h)
+{
+    uint16_t ah = addr.data()[0];
+    uint16_t hh = h.data()[0];
+    return (((ah << 8) + addr.data()[1]) ^ ((hh << 8) + h.data()[1])) < 65536/25;
 }

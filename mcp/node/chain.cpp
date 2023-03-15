@@ -15,7 +15,8 @@
 
 mcp::chain::chain(mcp::block_store& store_a) :
 	m_store(store_a),
-	m_stopped(false)
+	m_stopped(false),
+	m_den(store_a)
 {
 }
 
@@ -938,6 +939,13 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						}
 						else{
 							LOG(m_log.info) << "[advance_stable_mci] DENMiningPing in";
+							std::shared_ptr<mcp::block> block = m_store.block_get(transaction_a, ap->hash());
+							if(mc_timestamp - block->exec_timestamp() > den_reward_period){
+								LOG(m_log.info) << "[advance_stable_mci] den's ping too late to stable";
+							}
+							else{
+								m_den.handle_den_mining_ping(transaction_a, ap->sender(), block->exec_timestamp());
+							}
 						}
 					}
 					catch (std::exception const& _e)

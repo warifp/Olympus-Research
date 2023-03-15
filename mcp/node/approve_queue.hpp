@@ -7,6 +7,7 @@
 #include <mcp/common/Exceptions.h>
 #include <mcp/common/async_task.hpp>
 #include <mcp/node/node_capability.hpp>
+#include <mcp/node/den/den.hpp>
 
 
 namespace mcp
