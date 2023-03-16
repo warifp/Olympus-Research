@@ -227,12 +227,17 @@ void mcp::chain::save_approve(mcp::timeout_db_transaction & timeout_tx_a, std::s
 				auto const& hash = t_a->sha3();
 				if (cache_a->approve_exists(transaction, hash))
 				{
-					assert_x_msg(false, "block exist do not added count,hash:" + hash.hex());
+					assert_x_msg(false, "approve exist do not added count,hash:" + hash.hex());
 				}
 
 				//save approve, need put first
 				cache_a->approve_put(transaction, t_a);
-				m_store.epoch_approves_put(transaction, mcp::epoch_approves_key(t_a->epoch(), t_a->sha3()));
+				if(t_a->type() == mcp::approve::WitnessElection){
+					m_store.epoch_approves_put(transaction, mcp::epoch_approves_key(t_a->epoch(), t_a->sha3()));
+				}
+				else{
+					//save approve and time
+				}
 				m_store.approve_unstable_count_add(transaction);
 				//LOG(m_log.debug) << "approve_unstable: add " << m_store.approve_unstable_count(transaction);
 				m_store.approve_count_add(transaction);
@@ -940,12 +945,12 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						else{
 							LOG(m_log.info) << "[advance_stable_mci] DENMiningPing in";
 							std::shared_ptr<mcp::block> block = m_store.block_get(transaction_a, ap->hash());
-							if(mc_timestamp - block->exec_timestamp() > den_reward_period){
-								LOG(m_log.info) << "[advance_stable_mci] den's ping too late to stable";
-							}
-							else{
-								m_den.handle_den_mining_ping(transaction_a, ap->sender(), block->exec_timestamp());
-							}
+							// if(mc_timestamp - block->exec_timestamp() > den_reward_period){
+							// 	LOG(m_log.info) << "[advance_stable_mci] den's ping too late to stable";
+							// }
+							// else{
+							 	m_den.handle_den_mining_ping(transaction_a, ap->sender(), block->exec_timestamp());
+							// }
 						}
 					}
 					catch (std::exception const& _e)

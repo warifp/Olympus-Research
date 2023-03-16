@@ -67,6 +67,7 @@ void mcp::den::handle_den_mining_ping(mcp::db::db_transaction & transaction_a, c
     auto &pings = m_dens[addr].pings;
     uint32_t day = time / den_reward_period / 24;
     uint32_t hour = time / den_reward_period % 24;
+    LOG(m_log.info) << "[handle_den_mining_ping] true day=" << day << " hour=" << hour;
     pings[day][hour] = {time, true};
     for(uint32_t h=u.last_ping_time/den_reward_period+1; h<time/den_reward_period; h++){
         mcp::block_hash hash;
@@ -78,12 +79,14 @@ void mcp::den::handle_den_mining_ping(mcp::db::db_transaction & transaction_a, c
         {
             pings[h / 24][h % 24] = {time, false};
             u.no_ping_times = 0;
+            LOG(m_log.info) << "[handle_den_mining_ping] false1 day=" << h/24 << " hour=" << h%24;
         }
         else{
             u.no_ping_times++;
             if(u.no_ping_times >= 100){
                 u.no_ping_times = 0;
                 pings[h / 24][h % 24] = {time, false};
+                LOG(m_log.info) << "[handle_den_mining_ping] false2 day=" << h/24 << " hour=" << h%24;
             }
         }
     }
@@ -215,5 +218,6 @@ bool mcp::den::need_ping(const dev::Address &addr, const block_hash &h)
 {
     uint16_t ah = addr.data()[0];
     uint16_t hh = h.data()[0];
-    return (((ah << 8) + addr.data()[1]) ^ ((hh << 8) + h.data()[1])) < 65536/25;
+    //return (((ah << 8) + addr.data()[1]) ^ ((hh << 8) + h.data()[1])) < 65536/25;
+    return true;
 }

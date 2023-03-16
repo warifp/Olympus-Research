@@ -335,6 +335,7 @@ namespace mcp
 				return ImportResult::Malformed;
 			}
 
+			LOG(m_log.error) << "[validateApprove] mci=" << _t.mci();
 			if (m_store.main_chain_get(transaction, _t.mci(), block_hash))
 			{
 				LOG(m_log.error) << "[validateApprove] faile to get mc's hash.";
@@ -378,6 +379,7 @@ namespace mcp
 				}
 			}
 
+			#if 0
 			if(mc_block->exec_timestamp()%den_reward_period >= (*(uint16_t *)_t.sender().data())%den_reward_period){
 				std::shared_ptr<mcp::block> mc_block_previous(m_cache->block_get(transaction, mc_block->previous()));
 				LOG(m_log.debug) << "[validateApprove] pre h:" << mc_block_previous->exec_timestamp()/den_reward_period << " h:" << mc_block->exec_timestamp()/den_reward_period << "pre yusu:" << mc_block_previous->exec_timestamp()%den_reward_period << "addr yusu" << (*(uint16_t *)_t.sender().data())%den_reward_period;
@@ -406,6 +408,7 @@ namespace mcp
 					return ImportResult::Malformed;
 				}
 			}
+			#endif
 		}
 		return ImportResult::Success;
 	}
