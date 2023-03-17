@@ -31,15 +31,16 @@ namespace mcp
     {
         dev::Address addr;
         uint32_t init_time;
-        uint32_t stake_factor;  //rang [0,10000]
+        uint32_t stake_factor = 0;  //rang [0,10000]
         uint32_t last_calc_day;
+        uint32_t last_calc_time;
         dev::u256 cur_rewords;
         std::map<uint32_t, reward_a_day> frozen;
 
-        bool last_receive;  //true: last ping received. false: last ping not received.
+        bool last_receive = true;  //true: last ping received. false: last ping not received.
         uint32_t last_ping_time;
-        uint32_t no_ping_times;
-        uint32_t online_score;  //rang [0,10000]
+        uint32_t no_ping_times = 0;
+        uint32_t online_score = 1;  //rang [0,10000]
         std::map<uint32_t, std::map<uint8_t, mining_ping>> pings; //<day, <hour, mining_ping>>
     };
 
@@ -61,6 +62,7 @@ namespace mcp
         bool is_mining(const dev::Address &addr){ return m_dens.find(addr) != m_dens.end(); }
         uint32_t last_ping_time(const dev::Address &addr);
         static bool need_ping(const dev::Address &addr, const block_hash &h);
+        void init(mcp::db::db_transaction & transaction_a);
     
     private:
         void set_max_stake(const dev::u256 &v);

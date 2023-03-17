@@ -1,13 +1,27 @@
 #include "den.hpp"
 #include <algorithm>
 #include "mcp/rpc/jsonHelper.hpp"
+#include <mcp/node/message.hpp>
 
 mcp::den::den(mcp::block_store& store_a) :
     m_store(store_a)
 {
     unit u;
-    dev::Address a;
+    u.stake_factor = 0;
     m_dens.emplace(jsToAddress("0x1144B522F45265C2DFDBAEE8E324719E63A1694C"), u);
+}
+
+void mcp::den::init(mcp::db::db_transaction & transaction_a)
+{
+    LOG(m_log.info) << "[den::init] in";
+    dev::h256s hashs;
+    auto den1 = jsToAddress("0x1144B522F45265C2DFDBAEE8E324719E63A1694C");
+    m_store.den_ping_get(transaction_a, den1, 0, hashs);
+    for(auto h : hashs){
+        LOG(m_log.info) << "[den::init] h=" << h.hexPrefixed();
+		std::shared_ptr<mcp::approve> a = m_store.approve_get(transaction_a, h);
+        LOG(m_log.info) << "[den::init] ping mci:" << a->mci() << " hashs:" << a->hash().hexPrefixed();
+    }
 }
 
 void mcp::den::set_max_stake(const dev::u256 &v)
@@ -91,6 +105,7 @@ void mcp::den::handle_den_mining_ping(mcp::db::db_transaction & transaction_a, c
         }
     }
     u.last_ping_time = time;
+    LOG(m_log.info) << "handle_den_mining_ping out ";
 }
 
 bool mcp::den::calculate_rewards(const dev::Address &addr, const uint32_t time, dev::u256 &give_rewards, dev::u256 &frozen_rewards, bool provide)

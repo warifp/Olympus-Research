@@ -43,7 +43,8 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	epoch_approves(0),
 	epoch_param(0),
 	transaction_account_state(0),
-	den_period_mc(0)
+	den_period_mc(0),
+	den_ping(0)
 {
 	if (error_a)
 		return;
@@ -93,6 +94,7 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	epoch_param = m_db->set_column_family(default_col, "032");
 	transaction_account_state = m_db->set_column_family(default_col, "033");
 	den_period_mc = m_db->set_column_family(default_col, "034");
+	den_ping = m_db->set_column_family(default_col, "035");
 
 	//use iterator
 	dag_free = m_db->set_column_family(default_col, "101");
@@ -1176,6 +1178,34 @@ void mcp::block_store::den_period_mc_put(mcp::db::db_transaction & transaction_a
 	transaction_a.put(den_period_mc, mcp::h64_to_slice(h), mcp::h256_to_slice(hash_a));
 }
 
+void mcp::block_store::den_ping_get(mcp::db::db_transaction & transaction_a, mcp::Address const & addr_a, uint32_t const & hour_a, h256s & hashs_a)
+{
+	mcp::den_ping_key key(addr_a, hour_a);
+	mcp::db::forward_iterator it(transaction_a.begin(den_ping, key.val()));
+	while (true)
+	{
+		if (!it.valid())
+			break;
+		mcp::den_ping_key ping_key(it.key());
+		if (ping_key.addr != addr_a)
+			break;
+
+		hashs_a.emplace_back(slice_to_h256(it.value()));
+
+		++it;
+	}
+}
+
+mcp::db::forward_iterator mcp::block_store::den_ping_begin(mcp::db::db_transaction & transaction_a, mcp::den_ping_key const & key_a)
+{
+	mcp::db::forward_iterator result(transaction_a.begin(den_ping, key_a.val()));
+	return result;
+}
+
+void mcp::block_store::den_ping_put(mcp::db::db_transaction &transaction_a, mcp::den_ping_key const &key_a, h256 const &hash)
+{
+	transaction_a.put(den_ping, key_a.val(), mcp::h256_to_slice(hash));
+}
 
 dev::h256 const mcp::block_store::version_key(0);
 dev::h256 const mcp::block_store::genesis_hash_key(1);

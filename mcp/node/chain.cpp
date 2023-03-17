@@ -93,6 +93,7 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 	update_cache();
 
 	m_den_mining_contract = right160(sha3(rlpList(mcp::sys_contract, 0)));
+	m_den.init(transaction);
 }
 
 void mcp::chain::stop()
@@ -945,11 +946,14 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						else{
 							LOG(m_log.info) << "[advance_stable_mci] DENMiningPing in";
 							std::shared_ptr<mcp::block> block = m_store.block_get(transaction_a, ap->hash());
+							
 							// if(mc_timestamp - block->exec_timestamp() > den_reward_period){
 							// 	LOG(m_log.info) << "[advance_stable_mci] den's ping too late to stable";
 							// }
 							// else{
 							 	m_den.handle_den_mining_ping(transaction_a, ap->sender(), block->exec_timestamp());
+								LOG(m_log.info) << "[advance_stable_mci] hour=" << block->exec_timestamp()/den_reward_period << " hash=" << ap->hash().hexPrefixed();
+								m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), block->exec_timestamp()/den_reward_period), ap->sha3());
 							// }
 						}
 					}

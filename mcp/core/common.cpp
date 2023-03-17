@@ -867,3 +867,13 @@ mcp::epoch_approves_key::epoch_approves_key(dev::Slice const & val_a)
     std::copy(reinterpret_cast<uint8_t const *> (val_a.data()), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(*this), reinterpret_cast<uint8_t *> (this));
 }
 
+mcp::den_ping_key::den_ping_key(dev::Slice const & val_a)
+{
+    assert_x(val_a.size() == sizeof(*this));
+    std::copy(reinterpret_cast<uint8_t const *> (val_a.data()), reinterpret_cast<uint8_t const *> (val_a.data()) + sizeof(*this), reinterpret_cast<uint8_t *> (this));
+}
+
+bool mcp::den_ping_key::operator==(mcp::den_ping_key const & other) const
+{
+    return addr == other.addr && hour == other.hour;
+}

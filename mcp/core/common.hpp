@@ -582,4 +582,15 @@ namespace mcp
 		Epoch epoch;
 		h256 hash;
 	};
+
+	class den_ping_key
+	{
+	public:
+		den_ping_key(mcp::Address const & addr_a, uint32_t const & hour_a) : addr(addr_a), hour(hour_a) {}
+		den_ping_key(dev::Slice const &);
+		bool operator== (mcp::den_ping_key const &) const;
+		dev::Slice val() const { return dev::Slice((char *)this, sizeof(*this)); }
+		mcp::Address addr;
+		uint32_t hour;
+	};
 }
