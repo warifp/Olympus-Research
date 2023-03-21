@@ -286,8 +286,6 @@ add_library (node
 	mcp/node/approve_queue.hpp
 	mcp/node/requesting.cpp
 	mcp/node/requesting.hpp
-	mcp/node/den/den.hpp
-	mcp/node/den/den.cpp
     )
 
 add_library (p2p
@@ -375,6 +373,8 @@ add_library (core
 	mcp/core/approve.hpp
 	mcp/core/approve.cpp
 	mcp/core/iapprove_queue.hpp
+	mcp/core/den/den.hpp
+	mcp/core/den/den.cpp
 	)
 	
 add_executable (mcp

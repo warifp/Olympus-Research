@@ -10,7 +10,7 @@
 #include <mcp/node/chain_state.hpp>
 #include <mcp/node/sync.hpp>
 #include <mcp/core/approve_receipt.hpp>
-#include <mcp/node/den/den.hpp>
+#include <mcp/core/den/den.hpp>
 
 namespace mcp
 {

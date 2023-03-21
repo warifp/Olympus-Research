@@ -44,7 +44,8 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	epoch_param(0),
 	transaction_account_state(0),
 	den_period_mc(0),
-	den_ping(0)
+	den_ping(0),
+	den_rewards(0)
 {
 	if (error_a)
 		return;
@@ -95,6 +96,7 @@ mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & pa
 	transaction_account_state = m_db->set_column_family(default_col, "033");
 	den_period_mc = m_db->set_column_family(default_col, "034");
 	den_ping = m_db->set_column_family(default_col, "035");
+	den_rewards = m_db->set_column_family(default_col, "036");
 
 	//use iterator
 	dag_free = m_db->set_column_family(default_col, "101");
@@ -1205,6 +1207,32 @@ mcp::db::forward_iterator mcp::block_store::den_ping_begin(mcp::db::db_transacti
 void mcp::block_store::den_ping_put(mcp::db::db_transaction &transaction_a, mcp::den_ping_key const &key_a, h256 const &hash)
 {
 	transaction_a.put(den_ping, key_a.val(), mcp::h256_to_slice(hash));
+}
+
+bool mcp::block_store::den_rewards_get(mcp::db::db_transaction & transaction_a, mcp::Address const & addr_a, mcp::den_unit & unit_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
+{
+	std::string value;
+	bool exists(transaction_a.get(den_rewards, mcp::account_to_slice(addr_a), value, snapshot_a));
+	if (exists)
+	{
+		dev::RLP r(value);
+		unit_a.rewards_get(r);
+	}
+	return !exists;
+}
+
+void mcp::block_store::den_rewards_put(mcp::db::db_transaction & transaction_a, mcp::Address const & addr_a, mcp::den_unit & unit_a)
+{
+	// all parts of block except data
+	dev::bytes b_value;
+	{
+		dev::RLPStream s;
+		unit_a.rewards_streamRLP(s);
+		s.swapOut(b_value);
+	}
+
+	dev::Slice s_value((char *)b_value.data(), b_value.size());
+	transaction_a.put(den_rewards, mcp::account_to_slice(addr_a), s_value);
 }
 
 dev::h256 const mcp::block_store::version_key(0);

@@ -1,12 +1,15 @@
 #include "den.hpp"
 #include <algorithm>
+#include <map>
+#include <mcp/core/block_store.hpp>
+#include <mcp/core/approve.hpp>
 #include "mcp/rpc/jsonHelper.hpp"
-#include <mcp/node/message.hpp>
+#include "mcp/node/message.hpp"
 
 mcp::den::den(mcp::block_store& store_a) :
     m_store(store_a)
 {
-    unit u;
+    den_unit u;
     u.stake_factor = 0;
     m_dens.emplace(jsToAddress("0x1144B522F45265C2DFDBAEE8E324719E63A1694C"), u);
 }
@@ -121,7 +124,7 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint32_t time, 
         dev::u256 all_reward = 0;
         dev::u256 full_reward = m_param.max_reward_perday * u.stake_factor / 10000;
         bool & last_receive = u.last_receive;
-        for(std::map<uint32_t, std::map<uint8_t, mining_ping>>::iterator it = u.pings.begin(); it != u.pings.end() && it->first < cur_day;){
+        for(std::map<uint32_t, std::map<uint8_t, den_ping>>::iterator it = u.pings.begin(); it != u.pings.end() && it->first < cur_day;){
             if(it->second.empty()){  //There is no ping on this day.
                 if(last_receive){
                     if(u.online_score < 10000){
@@ -147,7 +150,7 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint32_t time, 
             {
                 uint8_t hour_last = 0;
                 uint8_t now;
-                std::map<uint8_t, mining_ping>::iterator it2;
+                std::map<uint8_t, den_ping>::iterator it2;
                 for(it2=it->second.begin(), now=it2->first; now <= 23;){
                     if(last_receive){
                         if(u.online_score < 10000){
@@ -189,29 +192,30 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint32_t time, 
                         now = 24;
                     }
                 }
-            } 
-            u.frozen[it->first] = {all_reward, all_reward * 75 / 100};
-            u.cur_rewords += all_reward * 25 / 100;
+            }
+            u.frozen[it->first] = all_reward * 75 / 100;
+            u.rewards += all_reward * 25 / 100;
             all_reward = 0;
             u.pings.erase(it++);
         }
 
-        for(std::map<uint32_t, reward_a_day>::iterator it = u.frozen.begin(); it != u.frozen.end() && it->first < cur_day;){
+        for(std::map<uint32_t, dev::u256>::iterator it = u.frozen.begin(); it != u.frozen.end() && it->first < cur_day;){
             if(cur_day - it->first >= 270){
-                u.cur_rewords += it->second.frozen_reward;
+                u.rewards += it->second;
                 u.frozen.erase(it++);
                 continue;
             }
-            auto give = it->second.all_reward * (cur_day-std::max(u.last_calc_day, it->first))/270;
-            it->second.frozen_reward -= give;
-            u.cur_rewords += give;
-            frozen_rewards += it->second.frozen_reward;
+            auto release_perday = it->second / (270 - (u.last_calc_day - it->first));
+            auto give = release_perday * (cur_day-std::max(u.last_calc_day, it->first));
+            it->second -= give;
+            u.rewards += give;
+            frozen_rewards += it->second;
             it++;
         }
 
-        give_rewards = u.cur_rewords;
+        give_rewards = u.rewards;
         if(provide){
-            u.cur_rewords = 0;
+            u.rewards = 0;
         }
         u.last_calc_day = cur_day;
         return true;
@@ -235,4 +239,32 @@ bool mcp::den::need_ping(const dev::Address &addr, const block_hash &h)
     uint16_t hh = h.data()[0];
     //return (((ah << 8) + addr.data()[1]) ^ ((hh << 8) + h.data()[1])) < 65536/25;
     return true;
+}
+
+
+void mcp::den_unit::rewards_get(dev::RLP const & rlp)
+{
+    if (!rlp.isList())
+        BOOST_THROW_EXCEPTION(InvalidTransactionFormat() << errinfo_comment("den unit RLP must be a list"));
+    size_t len = rlp.size();
+    assert(len >= 2);
+    rewards = rlp[0].toInt<u256>();
+    last_calc_time = rlp[1].toInt<uint32_t>();
+    for(int n=2; n<len; n++){
+        frozen.emplace(last_calc_time-n-1, rlp[n].toInt<u256>());
+    }
+}
+
+void mcp::den_unit::rewards_streamRLP(RLPStream& s)
+{
+    s.appendList(2 + frozen.size());
+    s << rewards << last_calc_time;
+    // for(std::map<uint32_t, dev::u256>::reverse_iterator it=frozen.rbegin(); it!=frozen.rend(); it++){
+    //     s << it->second;
+    // }
+}
+
+void mcp::den_unit::rewards_streamRLP2()
+{
+    
 }

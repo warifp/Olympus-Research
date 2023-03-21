@@ -6,14 +6,13 @@
 #include <unordered_map>
 #include <vector>
 #include <mcp/core/log_entry.hpp>
-#include <mcp/core/approve.hpp>
-#include <mcp/core/block_store.hpp>
+#include <mcp/core/timeout_db_transaction.hpp>
 #include <mcp/common/log.hpp>
 
 namespace mcp
 {
     const uint32_t den_reward_period = 30; //default 3600 second = 1 hour
-    struct mining_ping
+    struct den_ping
     {
         //uint64_t mci;
         //block_hash hash;
@@ -21,27 +20,33 @@ namespace mcp
         bool receive;
     };
 
-    struct reward_a_day
+    struct den_reward_a_day
     {
         dev::u256 all_reward;
         dev::u256 frozen_reward;
     };
     
-    struct unit
+    class den_unit
     {
+    public:
+        den_unit(){}
         dev::Address addr;
         uint32_t init_time;
         uint32_t stake_factor = 0;  //rang [0,10000]
+        dev::u256 rewards;
+        std::map<uint32_t, dev::u256> frozen;
         uint32_t last_calc_day;
         uint32_t last_calc_time;
-        dev::u256 cur_rewords;
-        std::map<uint32_t, reward_a_day> frozen;
 
         bool last_receive = true;  //true: last ping received. false: last ping not received.
         uint32_t last_ping_time;
         uint32_t no_ping_times = 0;
         uint32_t online_score = 1;  //rang [0,10000]
-        std::map<uint32_t, std::map<uint8_t, mining_ping>> pings; //<day, <hour, mining_ping>>
+        std::map<uint32_t, std::map<uint8_t, den_ping>> pings; //<day, <hour, den_ping>>
+
+        void rewards_get(dev::RLP const & rlp);
+		void rewards_streamRLP(RLPStream& s);
+		void rewards_streamRLP2();
     };
 
     struct den_param
@@ -50,6 +55,7 @@ namespace mcp
         dev::u256 max_reward_perday;
     };
 
+    class block_store;
     class den
     {
     public:
@@ -73,7 +79,7 @@ namespace mcp
         void unstake(const dev::Address &addr, dev::u256 &v);
 
         den_param m_param;
-        std::unordered_map<dev::Address, unit> m_dens;
+        std::unordered_map<dev::Address, den_unit> m_dens;
         
 		mcp::block_store & m_store;
         mcp::log m_log = { mcp::log("node") };

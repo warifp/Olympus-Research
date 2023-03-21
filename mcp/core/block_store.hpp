@@ -5,9 +5,11 @@
 #include <mcp/db/database.hpp>
 #include <mcp/core/transaction_receipt.hpp>
 #include <mcp/core/approve_receipt.hpp>
+#include <mcp/core/den/den.hpp>
 
 namespace mcp
 {
+	class den_unit;
 	/**
 	* Manages block storage and iteration
 	*/
@@ -182,6 +184,9 @@ namespace mcp
 		mcp::db::forward_iterator den_ping_begin(mcp::db::db_transaction & transaction_a, mcp::den_ping_key const & key_a);
 		void den_ping_put(mcp::db::db_transaction & transaction_a, mcp::den_ping_key const & key_a, h256 const &hash);
 
+		bool den_rewards_get(mcp::db::db_transaction & transaction_a, mcp::Address const & addr_a, mcp::den_unit & unit_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
+		void den_rewards_put(mcp::db::db_transaction & transaction_a, mcp::Address const & addr_a, mcp::den_unit & unit_a);
+
 		mcp::db::db_transaction create_transaction(std::shared_ptr<rocksdb::WriteOptions> write_options_a = nullptr,
 			std::shared_ptr<rocksdb::TransactionOptions> txn_ops_a = nullptr)
 		{
@@ -271,6 +276,7 @@ namespace mcp
 		//hour -> main chain block hash
 		int den_period_mc;
 		int den_ping;
+		int den_rewards;
 
 		//genesis hash key
 		static dev::h256 const genesis_hash_key;
