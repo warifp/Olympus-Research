@@ -25,6 +25,11 @@ along with cpp-ethereum.  If not, see <http://www.gnu.org/licenses/>.
 #include <libdevcrypto/Hash.h>
 #include <libdevcrypto/Common.h>
 #include <libdevcrypto/LibSnark.h>
+#include <mcp/common/log.hpp>
+#include <mcp/core/den/den.hpp>
+#include "mcp/node/message.hpp"
+
+extern mcp::log g_log;
 
 using namespace std;
 using namespace dev;
@@ -202,6 +207,20 @@ namespace
 	ETH_REGISTER_PRECOMPILED_PRICER(alt_bn128_pairing_product)(bytesConstRef _in)
 	{
 		return 100000 + (_in.size() / 192) * 80000;
+	}
+
+	ETH_REGISTER_PRECOMPILED(calculate_den_rewards)(bytesConstRef _in)
+	{
+		LOG(mcp::g_log.debug) << "[calculate_den_rewards] in"<<__LINE__;
+		dev::Address addr;
+		uint32_t time = mcp::seconds_since_epoch();
+		dev::u256 give_rewards;
+		dev::u256 frozen_rewards;
+		bool provide;
+		mcp::g_den->calculate_rewards(addr, time, give_rewards, frozen_rewards, provide);	
+		uint32_t test1 = _in.data()[0];
+
+		return{ true, bytes{} };
 	}
 
 }

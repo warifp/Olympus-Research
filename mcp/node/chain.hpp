@@ -84,7 +84,7 @@ namespace mcp
 		Epoch last_epoch();
 		Epoch last_stable_epoch();
 		uint32_t cur_stable_time() {return m_cur_stable_time;}
-		den m_den;
+		std::shared_ptr<den> m_den;
 
 	private:
 		void write_dag_block(mcp::db::db_transaction & transaction_a, std::shared_ptr<mcp::process_block_cache> cache_a, std::shared_ptr<mcp::block> block_a);

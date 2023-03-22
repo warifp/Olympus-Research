@@ -36,7 +36,7 @@ namespace mcp
         dev::u256 rewards;
         std::map<uint32_t, dev::u256> frozen;
         uint32_t last_calc_day;
-        uint32_t last_calc_time;
+        uint32_t last_calc_time = 0;
 
         bool last_receive = true;  //true: last ping received. false: last ping not received.
         uint32_t last_ping_time;
@@ -46,7 +46,6 @@ namespace mcp
 
         void rewards_get(dev::RLP const & rlp);
 		void rewards_streamRLP(RLPStream& s);
-		void rewards_streamRLP2();
     };
 
     struct den_param
@@ -84,4 +83,6 @@ namespace mcp
 		mcp::block_store & m_store;
         mcp::log m_log = { mcp::log("node") };
     };
+    
+    extern std::shared_ptr<mcp::den> g_den;
 }

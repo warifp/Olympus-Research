@@ -8,6 +8,7 @@
 #include <mcp/node/witness.hpp>
 #include <mcp/node/requesting.hpp>
 #include <mcp/common/log.hpp>
+#include <mcp/core/den/den.hpp>
 
 mcp::thread_runner::thread_runner(boost::asio::io_service & service_a, unsigned service_threads_a, std::string const &service_name)
 {
@@ -758,6 +759,8 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 
 		///cache
 		std::shared_ptr<mcp::block_cache> cache(std::make_shared<mcp::block_cache>(chain_store));
+
+		mcp::g_den = std::make_shared<mcp::den>(chain_store);
 
 		mcp::param::init(cache);
 		///chain

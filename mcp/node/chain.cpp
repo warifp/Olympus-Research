@@ -15,9 +15,9 @@
 
 mcp::chain::chain(mcp::block_store& store_a) :
 	m_store(store_a),
-	m_stopped(false),
-	m_den(store_a)
+	m_stopped(false)
 {
+	m_den = g_den;
 }
 
 mcp::chain::~chain()
@@ -66,6 +66,7 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 	m_precompiled.insert(std::make_pair(Address(6), dev::eth::PrecompiledContract(500, 0, dev::eth::PrecompiledRegistrar::executor("alt_bn128_G1_add"))));
 	m_precompiled.insert(std::make_pair(Address(7), dev::eth::PrecompiledContract(40000, 0, dev::eth::PrecompiledRegistrar::executor("alt_bn128_G1_mul"))));
 	m_precompiled.insert(std::make_pair(Address(8), dev::eth::PrecompiledContract(dev::eth::PrecompiledRegistrar::pricer("alt_bn128_pairing_product"), dev::eth::PrecompiledRegistrar::executor("alt_bn128_pairing_product"))));
+	m_precompiled.insert(std::make_pair(Address(9), dev::eth::PrecompiledContract(800, 0, dev::eth::PrecompiledRegistrar::executor("calculate_den_rewards"))));
 
 	//get init data
 	m_last_mci_internal = m_store.last_mci_get(transaction);
@@ -93,7 +94,7 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 	update_cache();
 
 	m_den_mining_contract = right160(sha3(rlpList(mcp::sys_contract, 0)));
-	m_den.init(transaction);
+	m_den->init(transaction);
 }
 
 void mcp::chain::stop()
@@ -821,7 +822,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						
 						
 						if(m_den_mining_contract == _t->to()){
-							m_den.handle_den_mining_event(result.second.log());
+							m_den->handle_den_mining_event(result.second.log());
 						}
 						else{
 							LOG(m_log.info) << "handle_den_mining_event not in";
@@ -951,7 +952,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 							// 	LOG(m_log.info) << "[advance_stable_mci] den's ping too late to stable";
 							// }
 							// else{
-							 	m_den.handle_den_mining_ping(transaction_a, ap->sender(), block->exec_timestamp());
+							 	m_den->handle_den_mining_ping(transaction_a, ap->sender(), block->exec_timestamp());
 								LOG(m_log.info) << "[advance_stable_mci] hour=" << block->exec_timestamp()/den_reward_period << " hash=" << ap->hash().hexPrefixed();
 								m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), block->exec_timestamp()/den_reward_period), ap->sha3());
 							// }
