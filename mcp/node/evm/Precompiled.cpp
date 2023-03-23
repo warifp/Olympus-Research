@@ -211,16 +211,22 @@ namespace
 
 	ETH_REGISTER_PRECOMPILED(calculate_den_rewards)(bytesConstRef _in)
 	{
-		LOG(mcp::g_log.debug) << "[calculate_den_rewards] in"<<__LINE__;
-		dev::Address addr;
-		uint32_t time = mcp::seconds_since_epoch();
+		LOG(mcp::g_log.debug) << "[calculate_den_rewards] in"<<_in.size();
+		LOG(mcp::g_log.debug) << mcp::toHexPrefixed(_in);
+
+		dev::Address addr = dev::Address(_in.cropped(12, 20));
+		string s = FixedHash<4>(_in.cropped(60, 4)).hexPrefixed();
+		uint32_t time = std::stoi(s, nullptr, 16);
+		LOG(mcp::g_log.debug) << "[calculate_den_rewards] addr = " << addr.hexPrefixed() << " time=" << time;
 		dev::u256 give_rewards;
 		dev::u256 frozen_rewards;
-		bool provide;
-		mcp::g_den->calculate_rewards(addr, time, give_rewards, frozen_rewards, provide);	
-		uint32_t test1 = _in.data()[0];
-
-		return{ true, bytes{} };
+		mcp::g_den->calculate_rewards(addr, time, give_rewards, frozen_rewards, true);
+		LOG(mcp::g_log.debug) << "[calculate_den_rewards] give_rewards = " << give_rewards.str() << " frozen_rewards=" << frozen_rewards.str();
+		// bytes give = give_rewards.convert_to<bytes>();
+		// bytes frozen = frozen_rewards.convert_to<bytes>();
+		// give.insert(give.end(), frozen.begin(), frozen.end());
+		// return{ true, give};
+		return{ true, bytes{}};
 	}
 
 }
