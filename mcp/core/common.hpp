@@ -586,11 +586,15 @@ namespace mcp
 	class den_ping_key
 	{
 	public:
-		den_ping_key(mcp::Address const & addr_a, uint32_t const & hour_a) : addr(addr_a), hour(hour_a) {}
+		den_ping_key(mcp::Address const & addr_a, uint64_t const & hour_a) : addr(addr_a) {
+			for(int i=0; i<8; i++){
+				hour[i] = hour_a >> (7-i)*8;
+			}
+		}
 		den_ping_key(dev::Slice const &);
 		bool operator== (mcp::den_ping_key const &) const;
 		dev::Slice val() const { return dev::Slice((char *)this, sizeof(*this)); }
 		mcp::Address addr;
-		uint32_t hour;
+		std::array<char, 8> hour;
 	};
 }

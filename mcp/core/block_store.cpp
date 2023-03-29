@@ -1180,7 +1180,7 @@ void mcp::block_store::den_period_mc_put(mcp::db::db_transaction & transaction_a
 	transaction_a.put(den_period_mc, mcp::h64_to_slice(h), mcp::h256_to_slice(hash_a));
 }
 
-void mcp::block_store::den_ping_get(mcp::db::db_transaction & transaction_a, mcp::Address const & addr_a, uint32_t const & hour_a, h256s & hashs_a)
+void mcp::block_store::den_ping_get(mcp::db::db_transaction & transaction_a, mcp::Address const & addr_a, uint64_t const & hour_a, h256s & hashs_a)
 {
 	mcp::den_ping_key key(addr_a, hour_a);
 	mcp::db::forward_iterator it(transaction_a.begin(den_ping, key.val()));

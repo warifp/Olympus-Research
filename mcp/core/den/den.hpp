@@ -16,8 +16,8 @@ namespace mcp
     {
         //uint64_t mci;
         //block_hash hash;
-        uint32_t time;
-        bool receive;
+        uint64_t time;
+        bool receive = false;
     };
 
     struct den_reward_a_day
@@ -31,27 +31,29 @@ namespace mcp
     public:
         den_unit(){}
         dev::Address addr;
-        uint32_t init_time;
-        uint32_t stake_factor = 0;  //rang [0,10000]
-        dev::u256 rewards;
-        std::map<uint32_t, dev::u256> frozen;
-        uint32_t last_calc_day;
-        uint32_t last_calc_time = 0;
+        uint64_t init_time;
+        uint32_t stake_factor = 10000;  //rang [0,10000]
+        dev::u256 rewards; //storage
+        std::map<uint64_t, dev::u256> frozen; //storage
+        uint64_t last_calc_time = 0; //storage
 
-        bool last_receive = true;  //true: last ping received. false: last ping not received.
-        uint32_t last_ping_time;
-        uint32_t no_ping_times = 0;
-        uint32_t online_score = 1;  //rang [0,10000]
-        std::map<uint32_t, std::map<uint8_t, den_ping>> pings; //<day, <hour, den_ping>>
+        bool last_receive = true;  //true: last ping received. false: last ping not received. storage
+        uint64_t last_handle_ping_time = 0; //storage
+        uint32_t no_ping_times = 0; //storage
+        uint32_t online_score = 1;  //rang [0,10000]  storage
+        std::map<uint64_t, std::map<uint8_t, den_ping>> pings; //<day, <hour, den_ping>>
 
         void rewards_get(dev::RLP const & rlp);
 		void rewards_streamRLP(RLPStream& s);
+
+    private:
+        mcp::log m_log = { mcp::log("node") };
     };
 
     struct den_param
     {
         dev::u256 max_stake;
-        dev::u256 max_reward_perday;
+        dev::u256 max_reward_perday = 1000000000000;
     };
 
     class block_store;
@@ -60,12 +62,12 @@ namespace mcp
     public:
         den(mcp::block_store& store_a);
         void handle_den_mining_event(const log_entries &log_a);
-        void handle_den_mining_ping(mcp::db::db_transaction & transaction_a, const dev::Address &addr, const uint32_t &time);
-        bool calculate_rewards(const dev::Address &addr, const uint32_t time, dev::u256 &give_rewards, dev::u256 &frozen_rewards, bool provide);
-        void set_cur_time(const uint32_t &time);
-        void set_mc_block_time(const uint32_t &time, const block_hash &h);
+        void handle_den_mining_ping(mcp::db::db_transaction & transaction_a, const dev::Address &addr, const uint64_t &time, bool ping);
+        bool calculate_rewards(const dev::Address &addr, const uint64_t time, dev::u256 &give_rewards, dev::u256 &frozen_rewards, bool provide);
+        void set_cur_time(const uint64_t &time);
+        void set_mc_block_time(const uint64_t &time, const block_hash &h);
         bool is_mining(const dev::Address &addr){ return m_dens.find(addr) != m_dens.end(); }
-        uint32_t last_ping_time(const dev::Address &addr);
+        uint64_t last_handle_ping_time(const dev::Address &addr);
         static bool need_ping(const dev::Address &addr, const block_hash &h);
         void init(mcp::db::db_transaction & transaction_a);
     

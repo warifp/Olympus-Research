@@ -369,7 +369,7 @@ namespace mcp
 			else
 			{
 				//if continue not ping 100 times, need ping
-				if(mc_block->exec_timestamp()/den_reward_period - m_chain->m_den->last_ping_time(_t.sender())/den_reward_period == 100){
+				if(mc_block->exec_timestamp()/den_reward_period - m_chain->m_den->last_handle_ping_time(_t.sender())/den_reward_period == 100){
 					LOG(m_log.debug) << "[validateApprove] No ping 100 hours and need send now";
 				}
 				else

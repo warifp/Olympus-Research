@@ -180,7 +180,7 @@ namespace mcp
 		bool den_period_mc_get(mcp::db::db_transaction & transaction_a, uint32_t const & hour, mcp::block_hash & hash_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
 		void den_period_mc_put(mcp::db::db_transaction & transaction_a, uint32_t const & hour, mcp::block_hash const & hash_a);
 
-		void den_ping_get(mcp::db::db_transaction & transaction_a, mcp::Address const & addr_a, uint32_t const & hour_a, std::vector<h256> & hashs_a);
+		void den_ping_get(mcp::db::db_transaction & transaction_a, mcp::Address const & addr_a, uint64_t const & hour_a, std::vector<h256> & hashs_a);
 		mcp::db::forward_iterator den_ping_begin(mcp::db::db_transaction & transaction_a, mcp::den_ping_key const & key_a);
 		void den_ping_put(mcp::db::db_transaction & transaction_a, mcp::den_ping_key const & key_a, h256 const &hash);
 
