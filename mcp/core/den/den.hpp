@@ -40,7 +40,7 @@ namespace mcp
         bool last_receive = true;  //true: last ping received. false: last ping not received. storage
         uint64_t last_handle_ping_time = 0; //storage
         uint32_t no_ping_times = 0; //storage
-        uint32_t online_score = 1;  //rang [0,10000]  storage
+        uint32_t online_score = 10000;  //rang [0,10000]  storage
         std::map<uint64_t, std::map<uint8_t, den_ping>> pings; //<day, <hour, den_ping>>
 
         void rewards_get(dev::RLP const & rlp);
@@ -66,7 +66,7 @@ namespace mcp
         bool calculate_rewards(const dev::Address &addr, const uint64_t time, dev::u256 &give_rewards, dev::u256 &frozen_rewards, bool provide);
         void set_cur_time(const uint64_t &time);
         void set_mc_block_time(const uint64_t &time, const block_hash &h);
-        bool is_mining(const dev::Address &addr){ return m_dens.find(addr) != m_dens.end(); }
+        bool is_mining(const dev::Address &addr){ return m_den_units.find(addr) != m_den_units.end(); }
         uint64_t last_handle_ping_time(const dev::Address &addr);
         static bool need_ping(const dev::Address &addr, const block_hash &h);
         void init(mcp::db::db_transaction & transaction_a);
@@ -80,7 +80,7 @@ namespace mcp
         void unstake(const dev::Address &addr, dev::u256 &v);
 
         den_param m_param;
-        std::unordered_map<dev::Address, den_unit> m_dens;
+        std::unordered_map<dev::Address, den_unit> m_den_units;
         
 		mcp::block_store & m_store;
         mcp::log m_log = { mcp::log("node") };
