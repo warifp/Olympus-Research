@@ -11,7 +11,7 @@
 
 namespace mcp
 {
-    const uint32_t den_reward_period = 30; //default 3600 second = 1 hour
+    const uint32_t den_reward_period = 10; //default 3600 second = 1 hour
     struct den_ping
     {
         //uint64_t mci;
@@ -40,6 +40,7 @@ namespace mcp
         bool last_receive = true;  //true: last ping received. false: last ping not received. storage
         uint64_t last_handle_ping_time = 0; //storage
         uint32_t no_ping_times = 0; //storage
+        uint32_t ping_lose_time = 0; //storage
         uint32_t online_score = 10000;  //rang [0,10000]  storage
         std::map<uint64_t, std::map<uint8_t, den_ping>> pings; //<day, <hour, den_ping>>
 
