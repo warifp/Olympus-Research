@@ -23,9 +23,6 @@ void mcp::den::init(mcp::db::db_transaction & transaction_a)
     LOG(m_log.info) << "[den::init] in";
     for(std::unordered_map<dev::Address, den_unit>::iterator it=m_den_units.begin(); it!=m_den_units.end(); it++){
         if(!m_store.den_rewards_get(transaction_a, it->first, it->second)){
-            for(auto f : it->second.frozen){
-                LOG(m_log.info) << "[den::init] day=" << f.first << " v=" << f.second;
-            }
             LOG(m_log.info) << "[den::init] den_rewards get ok. " << it->first.hexPrefixed();
         }
         else{
@@ -139,7 +136,7 @@ void mcp::den::handle_den_mining_ping(mcp::db::db_transaction & transaction_a, c
 
 bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, dev::u256 &give_rewards, dev::u256 &frozen_rewards, bool provide)
 {
-    LOG(m_log.info) << "[calculate_rewards] in addr=" << addr.hexPrefixed();
+    LOG(m_log.info) << "[calculate_rewards] in addr=" << addr.hexPrefixed() << " time=" << time;
     mcp::db::db_transaction transaction(m_store.create_transaction());
     if(m_den_units.count(addr)){
 
@@ -152,7 +149,7 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
         }
         handle_den_mining_ping(transaction, addr, time, false);
 
-        dev::u256 all_reward = 0;
+        dev::u256 reward = 0;
         dev::u256 full_reward = m_param.max_reward_perday * u.stake_factor / 10000;
         bool & last_receive = u.last_receive;
         for(std::map<uint64_t, std::map<uint8_t, den_ping>>::iterator it = u.pings.begin(); it != u.pings.end() && it->first < cur_day;)
@@ -173,8 +170,8 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
             else{
                 hour_next = it2->first;
             }
-            LOG(m_log.info) << "[calculate_rewards] day=" << it->first << " hour_next=" << (uint32_t)hour_next << " last_receive=" << last_receive;
-            all_reward = 0;
+            LOG(m_log.info) << "[calculateOneday] day=" << it->first << " hour_next=" << (uint32_t)hour_next << " last_receive=" << last_receive;
+            reward = 0;
             for(;;){
                 if(last_receive){
                     u.ping_lose_time = 0;
@@ -183,13 +180,13 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
                         for(int i=0; i<hour_next-hour_pre; i++){
                             score += std::min((uint32_t)10000, u.online_score + (i+1)*10000/168);
                         }
-                        all_reward += full_reward * score / 10000;
+                        reward += full_reward * score / 10000;
                         u.online_score = std::min((uint32_t)10000, u.online_score + (hour_next-hour_pre)*10000/168);
                     }
                     else{
-                        all_reward += full_reward*(hour_next-hour_pre);
+                        reward += full_reward*(hour_next-hour_pre);
                     }
-                    LOG(m_log.info) << "[calculate_rewards] all_reward=" << all_reward.str() << " online_score=" << u.online_score;
+                    LOG(m_log.info) << "[calculateOneday] reward=" << reward.str() << " online_score=" << u.online_score;
                 }
                 else{
                     u.ping_lose_time += 1;
@@ -200,11 +197,11 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
                         u.online_score -= (hour_next-hour_pre)*10000/72;
                     }
                     else u.online_score = 0;
-                    LOG(m_log.info) << "[calculate_rewards] false and online_score=" << u.online_score << " ping_lose_time=" << u.ping_lose_time;
+                    LOG(m_log.info) << "[calculateOneday] false and online_score=" << u.online_score << " ping_lose_time=" << u.ping_lose_time;
                 }
 
                 if(hour_next == 24){
-                    LOG(m_log.info) << "[calculate_rewards] all_reward=" << all_reward.str() << " online_score=" << u.online_score;
+                    LOG(m_log.info) << "[calculateOneday] all reward in day " << it->first << " v=" << reward.str() << " online_score=" << u.online_score;
                     break;
                 }
 
@@ -217,12 +214,11 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
                 else{
                     hour_next = 24;
                 }
-                //LOG(m_log.info) << "[calculate_rewards] hour_pre=" << (uint16_t)hour_pre << " hour_next=" << (uint16_t)hour_next;
             }
             
-            u.frozen[it->first] = all_reward * 75 / 100;
-            LOG(m_log.info) << "[calculate_rewards] frozen day=" << it->first << " v=" << u.frozen[it->first].str();
-            u.rewards += all_reward - u.frozen[it->first];
+            u.frozen[it->first] = reward * 75 / 100;
+            LOG(m_log.info) << "[calculateOneday] frozen day=" << it->first << " v=" << u.frozen[it->first].str();
+            u.rewards += reward - u.frozen[it->first];
             uint64_t preday = it->first;
             uint64_t nextday;
             u.pings.erase(it++);
@@ -235,7 +231,7 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
             }
             //Handle no ping days
             if(nextday - preday > 1){
-                LOG(m_log.info) << "[calculate_rewards] Handle no ping days. nextday=" << nextday << " preday=" << preday;
+                LOG(m_log.info) << "[HandleNoPingDays] Handle no ping days. preday=" << preday << " nextday=" << nextday;
                 for(int day=preday+1; day<nextday; day++){
                     if(last_receive){
                         u.ping_lose_time = 0;
@@ -244,23 +240,24 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
                             for(int i=1; i<=24; i++){
                                 score += std::min((uint32_t)10000, u.online_score + i*10000/168);
                             }
-                            all_reward = full_reward * score / 10000;
+                            reward = full_reward * score / 10000;
                             u.online_score = std::min((uint32_t)10000, u.online_score + 24*10000/168);
                         }
                         else{
-                            all_reward = full_reward*24;
+                            reward = full_reward*24;
                         }
                     }
                     else{
+                        reward = 0;
                         u.ping_lose_time += 24;
                         if(u.online_score > 10000*24/72){
                             u.online_score -= 10000*24/72;
                         }
                         else u.online_score = 0; 
                     }
-                    u.frozen[day] = all_reward * 75 / 100;
-                    u.rewards += all_reward - u.frozen[day];
-                    LOG(m_log.info) << "[calculate_rewards] day=" << day << " all frozen=" << u.frozen[it->first].str();
+                    u.frozen[day] = reward * 75 / 100;
+                    u.rewards += reward - u.frozen[day];
+                    LOG(m_log.info) << "[HandleNoPingDays] day=" << day << " frozen=" << u.frozen[day].str();
                 }
             }
         }
@@ -297,7 +294,7 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
         u.last_calc_time = time;
 
         m_store.den_rewards_put(transaction, addr, u);
-        LOG(m_log.info) << "[calculate_rewards] give_rewards=" << give_rewards << " frozen_rewards=" << frozen_rewards;
+        LOG(m_log.info) << "[calculate_rewards] over give_rewards=" << give_rewards << " frozen_rewards=" << frozen_rewards;
         return true;
     }
     else{
