@@ -937,8 +937,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						else{
 							LOG(m_log.info) << "[advance_stable_mci] DENMiningPing in";
 							std::shared_ptr<mcp::block> block = m_store.block_get(transaction_a, ap->hash());
-							
-							#if 1
+
 							// if(mc_timestamp - block->exec_timestamp() > den_reward_period){
 							// 	LOG(m_log.info) << "[advance_stable_mci] den's ping too late to stable";
 							// }
@@ -948,30 +947,6 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 								LOG(m_log.info) << "[advance_stable_mci] den_ping_put hour=" << block->exec_timestamp()/den_reward_period << " hash=" << ap->hash().hexPrefixed();
 								m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), block->exec_timestamp()/den_reward_period), ap->sha3());
 							// }
-							#else
-							 	m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), 0x12345678901), h256(0x11111));
-							 	m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), 0x12345678910), h256(0x22222));
-							 	m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), 0x12345678920), h256(0x33333));
-							 	m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), 0x12345678930), h256(0x44444));
-							 	m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), 0x12345678941), h256(0x55555));
-							 	m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), 0x234), h256(0x11));
-							 	m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), 0x2132131), h256(0x22));
-							 	m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), 0x2343243242), h256(0x33));
-							 	m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), 0x45435345), h256(0x44));
-							 	m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), 0x645656), h256(0x55));
-							 	m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), 0x67676), h256(0x66));
-							 	m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), 0x12345678910), h256(0x77));
-							 	m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), 0x878678), h256(0x88));
-							 	m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), 0x9797865), h256(0x99));
-							 	m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), 0x324234234234), h256(0x123));
-								
-        						dev::h256s hashs;
-								LOG(m_log.info) << "test den_ping_get in";
-								m_store.den_ping_get(transaction_a, ap->sender(), 0x12345678901+1, hashs);
-								for(auto h : hashs){
-									LOG(m_log.info) << "test den_ping_get:" << h.hexPrefixed();
-								}
-							#endif
 						}
 					}
 					catch (std::exception const& _e)
