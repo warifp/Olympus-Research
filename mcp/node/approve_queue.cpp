@@ -335,17 +335,20 @@ namespace mcp
 				return ImportResult::Malformed;
 			}
 
-			LOG(m_log.error) << "[validateApprove] mci=" << _t.mci();
+			LOG(m_log.error) << "[validateApprove] mci=" << _t.mci() << " hash=" << _t.hash().hexPrefixed();
 			if (m_store.main_chain_get(transaction, _t.mci(), block_hash))
 			{
 				LOG(m_log.error) << "[validateApprove] faile to get mc's hash.";
 				return ImportResult::Malformed;
 			}
+			LOG(m_log.error) << "[validateApprove] block_hash=" << block_hash.hexPrefixed();
 			if(block_hash != _t.hash()){
 				LOG(m_log.error) << "[validateApprove] The hash value is incorrect.";
 				return ImportResult::Malformed;
 			}
 			std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, block_hash));
+			
+			// add by Jeremy.
 			#if 0
 			if(m_chain->cur_stable_time() > mc_block->exec_timestamp() + den_reward_period){
 				LOG(m_log.error) << "[validateApprove] ping's time is too late.";
@@ -379,6 +382,7 @@ namespace mcp
 				}
 			}
 
+			// add by Jeremy.
 			#if 0
 			if(mc_block->exec_timestamp()%den_reward_period >= (*(uint16_t *)_t.sender().data())%den_reward_period){
 				std::shared_ptr<mcp::block> mc_block_previous(m_cache->block_get(transaction, mc_block->previous()));

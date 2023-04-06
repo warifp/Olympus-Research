@@ -322,6 +322,8 @@ bool mcp::den::need_ping(const dev::Address &addr, const block_hash &h)
 {
     uint16_t ah = addr.data()[0];
     uint16_t hh = h.data()[0];
+	
+    // add by Jeremy.
     //return (((ah << 8) + addr.data()[1]) ^ ((hh << 8) + h.data()[1])) < 65536/25;
     return true;
 }
