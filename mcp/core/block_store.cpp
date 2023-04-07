@@ -3,6 +3,7 @@
 #include <mcp/common/utility.hpp>
 #include <boost/endian/conversion.hpp>
 #include <mcp/common/log.hpp>
+#include <mcp/core/den/den.hpp>
 
 mcp::block_store::block_store(bool & error_a, boost::filesystem::path const & path_a) :
 	m_db(std::make_shared<mcp::db::database>(path_a)),

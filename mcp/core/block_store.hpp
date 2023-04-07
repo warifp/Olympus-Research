@@ -5,7 +5,6 @@
 #include <mcp/db/database.hpp>
 #include <mcp/core/transaction_receipt.hpp>
 #include <mcp/core/approve_receipt.hpp>
-#include <mcp/core/den/den.hpp>
 
 namespace mcp
 {

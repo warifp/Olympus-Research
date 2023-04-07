@@ -7,11 +7,12 @@
 #include <mcp/common/Exceptions.h>
 #include <mcp/common/async_task.hpp>
 #include <mcp/node/node_capability.hpp>
-#include <mcp/core/den/den.hpp>
 
 
 namespace mcp
 {
+	class den;
+	class den_unit;
 	class node_capability;
 	class ApproveQueue : public iApproveQueue
 	{

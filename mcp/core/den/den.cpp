@@ -322,10 +322,13 @@ bool mcp::den::need_ping(const dev::Address &addr, const block_hash &h)
 {
     uint16_t ah = addr.data()[0];
     uint16_t hh = h.data()[0];
+    LOG(g_log.info) << "[need_ping] over give_rewards=" << addr.hexPrefixed() << " h=" << h.hexPrefixed();
+    LOG(g_log.info) << "[need_ping]  random v=" << (((ah << 8) + addr.data()[1]) ^ ((hh << 8) + h.data()[1]));
 	
     // add by Jeremy.
     //return (((ah << 8) + addr.data()[1]) ^ ((hh << 8) + h.data()[1])) < 65536/25;
-    return true;
+    return (((ah << 8) + addr.data()[1]) ^ ((hh << 8) + h.data()[1])) > 65536/25;
+    //return true;
 }
 
 void mcp::den_unit::rewards_get(dev::RLP const & rlp)

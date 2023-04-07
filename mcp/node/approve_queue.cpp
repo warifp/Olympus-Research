@@ -1,6 +1,7 @@
 #include "approve_queue.hpp"
 #include <mcp/core/genesis.hpp>
 #include <thread>
+#include <mcp/core/den/den.hpp>
 
 namespace mcp
 {
@@ -335,28 +336,25 @@ namespace mcp
 				return ImportResult::Malformed;
 			}
 
-			LOG(m_log.error) << "[validateApprove] mci=" << _t.mci() << " hash=" << _t.hash().hexPrefixed();
+			LOG(m_log.info) << "[validateApprove] mci=" << _t.mci() << " hash=" << _t.hash().hexPrefixed();
 			if (m_store.main_chain_get(transaction, _t.mci(), block_hash))
 			{
 				LOG(m_log.error) << "[validateApprove] faile to get mc's hash.";
 				return ImportResult::Malformed;
 			}
-			LOG(m_log.error) << "[validateApprove] block_hash=" << block_hash.hexPrefixed();
+			LOG(m_log.info) << "[validateApprove] block_hash=" << block_hash.hexPrefixed();
 			if(block_hash != _t.hash()){
 				LOG(m_log.error) << "[validateApprove] The hash value is incorrect.";
 				return ImportResult::Malformed;
 			}
 			std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, block_hash));
 			
-			// add by Jeremy.
-			#if 0
+			#if 1 // For test
 			if(m_chain->cur_stable_time() > mc_block->exec_timestamp() + den_reward_period){
 				LOG(m_log.error) << "[validateApprove] ping's time is too late.";
 				return ImportResult::Malformed;
 			}
 			#endif
-			LOG(m_log.info) << "[validateApprove] sender=" << *(uint16_t *)_t.sender().data() << " hash=" << *(uint16_t *)_t.hash().data();
-			LOG(m_log.info) << " xor=" << (*(uint16_t *)_t.sender().data() ^ *(uint16_t *)_t.hash().data());
 
 			uint32_t hour = mc_block->exec_timestamp()/den_reward_period;
 			mcp::block_hash hour_hash;
@@ -364,7 +362,7 @@ namespace mcp
 				LOG(m_log.error) << "[validateApprove] can't get hour's hash";
 				return ImportResult::Malformed;
 			}
-			LOG(m_log.error) << "[validateApprove] get hour" << hour << "\'s hash: " << hour_hash.hexPrefixed();
+			LOG(m_log.info) << "[validateApprove] get hour" << hour << "\'s hash: " << hour_hash.hexPrefixed();
 
         	if(den::need_ping(_t.sender(), hour_hash)){
 				LOG(m_log.info) << "[validateApprove] random is match";
@@ -382,12 +380,14 @@ namespace mcp
 				}
 			}
 
-			// add by Jeremy.
-			#if 0
-			if(mc_block->exec_timestamp()%den_reward_period >= (*(uint16_t *)_t.sender().data())%den_reward_period){
+			#if 1 // For test
+			uint16_t ah = _t.sender().data()[0];
+			ah = (ah << 8) + _t.sender().data()[1];
+			LOG(m_log.debug) << "[validateApprove] ah=" << ah;
+			if(mc_block->exec_timestamp()%den_reward_period >= ah%den_reward_period){
 				std::shared_ptr<mcp::block> mc_block_previous(m_cache->block_get(transaction, mc_block->previous()));
-				LOG(m_log.debug) << "[validateApprove] pre h:" << mc_block_previous->exec_timestamp()/den_reward_period << " h:" << mc_block->exec_timestamp()/den_reward_period << "pre yusu:" << mc_block_previous->exec_timestamp()%den_reward_period << "addr yusu" << (*(uint16_t *)_t.sender().data())%den_reward_period;
-				if((mc_block_previous->exec_timestamp()/den_reward_period < mc_block->exec_timestamp()/den_reward_period) || (mc_block_previous->exec_timestamp()%den_reward_period < (*(uint16_t *)_t.sender().data())%den_reward_period)){
+				LOG(m_log.debug) << "[validateApprove] pre h:" << mc_block_previous->exec_timestamp()/den_reward_period << " h:" << mc_block->exec_timestamp()/den_reward_period << "pre yusu:" << mc_block_previous->exec_timestamp()%den_reward_period << "addr yusu" << ah%den_reward_period;
+				if((mc_block_previous->exec_timestamp()/den_reward_period < mc_block->exec_timestamp()/den_reward_period) || (mc_block_previous->exec_timestamp()%den_reward_period < ah%den_reward_period)){
 					LOG(m_log.debug) << "[validateApprove] time is ok";
 				}
 				else{

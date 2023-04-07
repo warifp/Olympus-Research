@@ -10,10 +10,10 @@
 #include <mcp/node/chain_state.hpp>
 #include <mcp/node/sync.hpp>
 #include <mcp/core/approve_receipt.hpp>
-#include <mcp/core/den/den.hpp>
 
 namespace mcp
 {
+	class den;
 	struct GasEstimationProgress
 	{
 		u256 lowerBound;

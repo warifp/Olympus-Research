@@ -10,6 +10,7 @@
 #include <mcp/core/config.hpp>
 #include <mcp/node/approve_queue.hpp>
 #include <mcp/consensus/ledger.hpp>
+#include <mcp/core/den/den.hpp>
 
 #include <queue>
 

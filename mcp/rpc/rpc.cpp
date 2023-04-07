@@ -11,6 +11,7 @@
 #include <libdevcore/CommonJS.h>
 #include <libdevcore/CommonData.h>
 #include <libdevcore/TrieHash.h>
+#include <mcp/core/den/den.hpp>
 
 #include "exceptions.hpp"
 #include "jsonHelper.hpp"
