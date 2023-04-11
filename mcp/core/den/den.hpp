@@ -35,7 +35,6 @@ namespace mcp
         uint32_t stake_factor = 10000;  //rang [0,10000]
         dev::u256 rewards; //storage
         std::map<uint64_t, dev::u256> frozen; //storage
-        uint64_t last_calc_time = 0; //storage
         uint64_t last_calc_day = 0; //storage
 
         bool last_receive = true;  //true: last ping received. false: last ping not received. storage
