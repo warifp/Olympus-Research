@@ -943,8 +943,6 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 							// 	LOG(m_log.info) << "[advance_stable_mci] den's ping too late to stable";
 							// }
 							// else{
-								LOG(m_log.info) << "[advance_stable_mci] ping mci=" << ap->mci();
-							 	m_den->handle_den_mining_ping(transaction_a, ap->sender(), block->exec_timestamp(), true);
 								LOG(m_log.info) << "[advance_stable_mci] den_ping_put hour=" << block->exec_timestamp()/den_reward_period << " hash=" << ap->hash().hexPrefixed();
 								m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), block->exec_timestamp()/den_reward_period), ap->sha3());
 							// }

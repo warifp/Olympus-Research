@@ -33,16 +33,16 @@ void mcp::den::init(mcp::db::db_transaction & transaction_a)
         }
         LOG(m_log.info) << "[den::init] last_calc_time=" << it->second.last_calc_time << " last_handle_ping_time=" << it->second.last_handle_ping_time;
         
-        dev::h256s hashs;
-        LOG(m_log.info) << "[den::init] den_ping_get hour=" << it->second.last_calc_time/den_reward_period+1;
-        m_store.den_ping_get(transaction_a, it->first, it->second.last_calc_time/den_reward_period+1, hashs);
-        for(auto h : hashs){
-            LOG(m_log.info) << "[den::init] h=" << h.hexPrefixed();
-            std::shared_ptr<mcp::approve> a = m_store.approve_get(transaction_a, h);
-            LOG(m_log.info) << "[den::init] ping mci:" << a->mci() << " hashs:" << a->hash().hexPrefixed();
-            std::shared_ptr<mcp::block> b = m_store.block_get(transaction_a, a->hash());
-            handle_den_mining_ping(transaction_a, it->first, b->exec_timestamp(), true);
-        }
+        // dev::h256s hashs;
+        // LOG(m_log.info) << "[den::init] den_ping_get hour=" << it->second.last_calc_time/den_reward_period+1;
+        // m_store.den_ping_get(transaction_a, it->first, it->second.last_calc_time/den_reward_period+1, hashs);
+        // for(auto h : hashs){
+        //     LOG(m_log.info) << "[den::init] h=" << h.hexPrefixed();
+        //     std::shared_ptr<mcp::approve> a = m_store.approve_get(transaction_a, h);
+        //     LOG(m_log.info) << "[den::init] ping mci:" << a->mci() << " hashs:" << a->hash().hexPrefixed();
+        //     std::shared_ptr<mcp::block> b = m_store.block_get(transaction_a, a->hash());
+        //     handle_den_mining_ping(transaction_a, it->first, b->exec_timestamp(), true);
+        // }
     }
     LOG(m_log.info) << "[den::init] ok. ";
 }
@@ -96,17 +96,14 @@ void mcp::den::handle_den_mining_event(const log_entries &log_a)
 }
 
 // time in the block which include ping approve.
-void mcp::den::handle_den_mining_ping(mcp::db::db_transaction & transaction_a, const dev::Address &addr, const uint64_t &time, bool ping)
+void mcp::den::handle_den_mining_ping(mcp::db::db_transaction & transaction_a, const dev::Address &addr, const uint64_t &time, bool ping, std::map<uint64_t, std::map<uint8_t, den_ping>>& pings)
 {
     LOG(m_log.info) << "handle_den_mining_ping in " << addr.hexPrefixed() << " time:" << time;
     if(m_den_units.count(addr) == 0) return;
     auto &u = m_den_units[addr];
-    auto &pings = m_den_units[addr].pings;
     uint64_t day = time / den_reward_period / 24;
     uint32_t hour = time / den_reward_period % 24;
     LOG(m_log.info) << "[handle_den_mining_ping] day=" << day << " hour=" << hour << " ping=" << ping;
-
-    if(ping) pings[day][hour] = {time, true};
 
     for(uint64_t h=u.last_handle_ping_time/den_reward_period+1; h<time/den_reward_period; h++){
         mcp::block_hash hash;
@@ -130,6 +127,12 @@ void mcp::den::handle_den_mining_ping(mcp::db::db_transaction & transaction_a, c
             }
         }
     }
+
+    if(ping) {
+        pings[day][hour] = {time, true};
+        u.no_ping_times = 0;
+    }
+
     u.last_handle_ping_time = time;
     LOG(m_log.info) << "handle_den_mining_ping out ";
 }
@@ -147,7 +150,29 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
             LOG(m_log.info) << "[calculate_rewards] call interval less than one day.";
             return false;
         }
-        handle_den_mining_ping(transaction, addr, time, false);
+
+        //handle pings
+        dev::h256s hashs;
+        bool handle_ping_over = false;
+        std::map<uint64_t, std::map<uint8_t, den_ping>> pings;
+        //for X/24*24, need get all days ping, and den_rewards_put save the status in the end of last day.
+        m_store.den_ping_get(transaction, addr, u.last_calc_time/den_reward_period/24*24, hashs);
+        for(auto h : hashs){
+            std::shared_ptr<mcp::approve> a = m_store.approve_get(transaction, h);
+            std::shared_ptr<mcp::block> b = m_store.block_get(transaction, a->hash());
+            LOG(m_log.info) << "[calculate_rewards] ping mci:" << a->mci() << " hashs:" << a->hash().hexPrefixed();
+            if(b->exec_timestamp()/den_reward_period/24 < cur_day){
+                handle_den_mining_ping(transaction, addr, b->exec_timestamp(), true, pings);
+            }
+            else{
+                handle_den_mining_ping(transaction, addr, cur_day*24 , false, pings);
+                handle_ping_over = true;
+                break;
+            }
+        }
+        if(!handle_ping_over){
+            handle_den_mining_ping(transaction, addr, cur_day*24, false, pings);
+        }
 
         dev::u256 full_reward = m_param.max_reward_perday * u.stake_factor / 10000;
         bool & last_receive = u.last_receive;
@@ -183,11 +208,11 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
                 LOG(m_log.info) << "[HandleNoPingDays] day=" << day << " frozen=" << u.frozen[day].str();
             }
         };
-        if(last_calc_day < u.pings.begin()->first){
+        if(last_calc_day < pings.begin()->first){
             LOG(m_log.info) << "[calculate_rewards] last_calc_day < first";
-            handle_no_ping_days(last_calc_day-1, u.pings.begin()->first);
+            handle_no_ping_days(last_calc_day-1, pings.begin()->first);
         }
-        for(std::map<uint64_t, std::map<uint8_t, den_ping>>::iterator it = u.pings.begin(); it != u.pings.end() && it->first < cur_day;)
+        for(std::map<uint64_t, std::map<uint8_t, den_ping>>::iterator it = pings.begin(); it != pings.end() && it->first < cur_day;)
         {
             uint8_t hour_pre = 0;
             uint8_t hour_next;
@@ -256,9 +281,9 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
             u.rewards += reward - u.frozen[it->first];
             uint64_t preday = it->first;
             uint64_t nextday;
-            u.pings.erase(it++);
+            pings.erase(it++);
 
-            if(it == u.pings.end()){
+            if(it == pings.end()){
                 nextday = cur_day;
             }
             else{
@@ -322,13 +347,10 @@ bool mcp::den::need_ping(const dev::Address &addr, const block_hash &h)
 {
     uint16_t ah = addr.data()[0];
     uint16_t hh = h.data()[0];
-    LOG(g_log.info) << "[need_ping] over give_rewards=" << addr.hexPrefixed() << " h=" << h.hexPrefixed();
-    LOG(g_log.info) << "[need_ping]  random v=" << (((ah << 8) + addr.data()[1]) ^ ((hh << 8) + h.data()[1]));
+    LOG(g_log.info) << "[need_ping] addr=" << addr.hexPrefixed() << " h=" << h.hexPrefixed();
+    LOG(g_log.info) << "[need_ping] random v=" << (((ah << 8) + addr.data()[1]) ^ ((hh << 8) + h.data()[1]));
 	
-    // add by Jeremy.
-    //return (((ah << 8) + addr.data()[1]) ^ ((hh << 8) + h.data()[1])) < 65536/25;
-    return (((ah << 8) + addr.data()[1]) ^ ((hh << 8) + h.data()[1])) > 65536/25;
-    //return true;
+    return (((ah << 8) + addr.data()[1]) ^ ((hh << 8) + h.data()[1])) < 65536/25;
 }
 
 void mcp::den_unit::rewards_get(dev::RLP const & rlp)
