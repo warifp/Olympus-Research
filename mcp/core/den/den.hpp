@@ -22,7 +22,7 @@ namespace mcp
 
     struct den_reward_a_day
     {
-        dev::u256 all_reward;
+        dev::u256 release_a_day;
         dev::u256 frozen_reward;
     };
     
@@ -34,7 +34,7 @@ namespace mcp
         uint64_t init_time;
         uint32_t stake_factor = 10000;  //rang [0,10000]
         dev::u256 rewards; //storage
-        std::map<uint64_t, dev::u256> frozen; //storage
+        std::map<uint64_t, den_reward_a_day> frozen; //storage <day, den_reward_a_day>
         uint64_t last_calc_day = 0; //storage
 
         bool last_receive = true;  //true: last ping received. false: last ping not received. storage
@@ -63,7 +63,7 @@ namespace mcp
         den(mcp::block_store& store_a);
         void handle_den_mining_event(const log_entries &log_a);
         void handle_den_mining_ping(mcp::db::db_transaction & transaction_a, const dev::Address &addr, const uint64_t &time, bool ping, std::map<uint64_t, std::map<uint8_t, den_ping>>& pings);
-        bool calculate_rewards(const dev::Address &addr, const uint64_t time, dev::u256 &give_rewards, dev::u256 &frozen_rewards, bool provide);
+        bool calculate_rewards(const dev::Address &addr, const uint64_t time, dev::u256 &give_rewards, dev::u256 &frozen_rewards);
         void set_cur_time(const uint64_t &time);
         void set_mc_block_time(const uint64_t &time, const block_hash &h);
         bool is_mining(const dev::Address &addr){ return m_den_units.find(addr) != m_den_units.end(); }

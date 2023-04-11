@@ -220,7 +220,7 @@ namespace
 		LOG(mcp::g_log.debug) << "[calculate_den_rewards] addr = " << addr.hexPrefixed() << " time=" << time;
 		dev::u256 give_rewards;
 		dev::u256 frozen_rewards;
-		mcp::g_den->calculate_rewards(addr, time, give_rewards, frozen_rewards, true);
+		mcp::g_den->calculate_rewards(addr, time, give_rewards, frozen_rewards);
 		LOG(mcp::g_log.debug) << "[calculate_den_rewards] give_rewards = " << give_rewards.str() << " frozen_rewards=" << frozen_rewards.str();
 		// bytes give = give_rewards.convert_to<bytes>();
 		// bytes frozen = frozen_rewards.convert_to<bytes>();

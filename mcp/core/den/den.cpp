@@ -126,7 +126,7 @@ void mcp::den::handle_den_mining_ping(mcp::db::db_transaction & transaction_a, c
     LOG(m_log.info) << "handle_den_mining_ping out ";
 }
 
-bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, dev::u256 &give_rewards, dev::u256 &frozen_rewards, bool provide)
+bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, dev::u256 &give_rewards, dev::u256 &frozen_rewards)
 {
     LOG(m_log.info) << "[calculate_rewards] in addr=" << addr.hexPrefixed() << " time=" << time;
     mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -191,9 +191,10 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
                     }
                     else u.online_score = 0; 
                 }
-                u.frozen[day] = reward * 75 / 100;
-                u.rewards += reward - u.frozen[day];
-                LOG(m_log.info) << "[HandleNoPingDays] day=" << day << " frozen=" << u.frozen[day].str();
+                u.frozen[day].frozen_reward = reward * 75 / 100;
+                u.frozen[day].release_a_day = reward/270;
+                u.rewards += reward - u.frozen[day].frozen_reward;
+                LOG(m_log.info) << "[HandleNoPingDays] day=" << day << " frozen_reward=" << u.frozen[day].frozen_reward.str() << " release_a_day=" << u.frozen[day].release_a_day.str();
             }
         };
         if(u.last_calc_day < pings.begin()->first){
@@ -264,9 +265,9 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
                 }
             }
             
-            u.frozen[it->first] = reward * 75 / 100;
-            LOG(m_log.info) << "[calculateOneday] frozen day=" << it->first << " v=" << u.frozen[it->first].str();
-            u.rewards += reward - u.frozen[it->first];
+            u.frozen[it->first].frozen_reward = reward * 75 / 100;
+            LOG(m_log.info) << "[calculateOneday] frozen day=" << it->first << " frozen_reward=" << u.frozen[it->first].frozen_reward.str() << " release_a_day=" << u.frozen[it->first].release_a_day.str();
+            u.rewards += reward - u.frozen[it->first].frozen_reward;
             uint64_t preday = it->first;
             uint64_t nextday;
             pings.erase(it++);
@@ -286,32 +287,22 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
         //handle frozen rewards
         frozen_rewards = 0;
         LOG(m_log.info) << "[calculate_rewards] handle frozen rewards";
-        for(std::map<uint64_t, dev::u256>::iterator it = u.frozen.begin(); it != u.frozen.end() && it->first < cur_day;){
+        for(std::map<uint64_t, den_reward_a_day>::iterator it = u.frozen.begin(); it != u.frozen.end() && it->first < cur_day;){
             LOG(m_log.info) << "[calculate_rewards] cur_day=" <<cur_day<<" it->first="<<it->first;
             if(cur_day - it->first >= 270){
-                u.rewards += it->second;
+                u.rewards += it->second.frozen_reward;
                 u.frozen.erase(it++);
                 continue;
             }
-            u256 release_perday;
-            if(u.last_calc_day > it->first){
-                release_perday = it->second / (270 - (u.last_calc_day - it->first));
-            }
-            else{
-                release_perday = it->second / 270;
-            }
-            auto give = release_perday * (cur_day-std::max(u.last_calc_day, it->first));
-            it->second -= give;
+            auto give = it->second.release_a_day * (cur_day - std::max(u.last_calc_day, it->first));
+            it->second.frozen_reward -= give;
             u.rewards += give;
-            frozen_rewards += it->second;
+            frozen_rewards += it->second.frozen_reward;
             LOG(m_log.info) << "[calculate_rewards] day=" << it->first << " frozen release=" << give.str();
             it++;
         }
 
         give_rewards = u.rewards;
-        if(provide){
-            u.rewards = 0;
-        }
         u.last_calc_day = time/(mcp::den_reward_period*24);
 
         m_store.den_rewards_put(transaction, addr, u);
@@ -356,20 +347,20 @@ void mcp::den_unit::rewards_get(dev::RLP const & rlp)
     online_score = rlp[5].toInt<uint32_t>();
     LOG(m_log.info) << "[rewards_get] rewards=" << rewards.str() << " last_calc_day=" <<last_calc_day << " last_receive=" << last_receive;
     LOG(m_log.info) << "[rewards_get] no_ping_times=" << no_ping_times << " ping_lose_time=" << ping_lose_time << " online_score=" <<online_score;
-    for(int n=0; n<count-den_except_frozen_len; n++){
-        frozen.emplace(last_calc_day-n-1, rlp[n+den_except_frozen_len].toInt<u256>());
-        LOG(m_log.info) << "[rewards_get] frozen day" << last_calc_day-n-1 << " =" << rlp[n+den_except_frozen_len].toInt<u256>().str();
+    for(int n=0; n<(count-den_except_frozen_len)/2; n++){
+        frozen.emplace(last_calc_day-n-1, mcp::den_reward_a_day{rlp[n+den_except_frozen_len].toInt<u256>(), rlp[n+1+den_except_frozen_len].toInt<u256>()});
+        LOG(m_log.info) << "[rewards_get] frozen day" << last_calc_day-n-1 << " frozen_reward=" << frozen[last_calc_day-n-1].frozen_reward << " release_a_day=" << frozen[last_calc_day-n-1].release_a_day;
     }
 }
 
 void mcp::den_unit::rewards_streamRLP(RLPStream& s)
 {
-    s.appendList(den_except_frozen_len + frozen.size());
+    s.appendList(den_except_frozen_len + frozen.size()*2);
     LOG(m_log.info) << "[rewards_streamRLP] rewards=" << rewards.str() << " last_calc_day=" <<last_calc_day << " last_receive=" << last_receive;
     LOG(m_log.info) << "[rewards_streamRLP] no_ping_times=" << no_ping_times << " ping_lose_time=" << ping_lose_time  << " online_score=" <<online_score;
     s << rewards << last_calc_day << last_receive << no_ping_times << ping_lose_time << online_score;
-    for(std::map<uint64_t, dev::u256>::reverse_iterator it=frozen.rbegin(); it!=frozen.rend(); it++){
-        s << it->second;
-        LOG(m_log.info) << "[rewards_streamRLP] frozen day=" << it->first << " v=" << it->second.str();
+    for(std::map<uint64_t, mcp::den_reward_a_day>::reverse_iterator it=frozen.rbegin(); it!=frozen.rend(); it++){
+        s << it->second.release_a_day << it->second.frozen_reward;
+        LOG(m_log.info) << "[rewards_streamRLP] frozen day=" << it->first << " frozen_reward=" << it->second.frozen_reward.str() << " release_a_day=" << it->second.release_a_day.str();
     }
 }
