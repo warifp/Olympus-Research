@@ -349,7 +349,7 @@ namespace mcp
 			}
 			std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, block_hash));
 			
-			#if 1 // For test
+			#if 0 // For test
 			if(m_chain->cur_stable_time() > mc_block->exec_timestamp() + den_reward_period){
 				LOG(m_log.error) << "[validateApprove] ping's time is too late.";
 				return ImportResult::Malformed;
@@ -380,7 +380,7 @@ namespace mcp
 				}
 			}
 
-			#if 1 // For test
+			#if 0 // For test
 			uint16_t ah = _t.sender().data()[0];
 			ah = (ah << 8) + _t.sender().data()[1];
 			LOG(m_log.debug) << "[validateApprove] ah=" << ah;

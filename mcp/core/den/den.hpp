@@ -12,6 +12,7 @@
 namespace mcp
 {
     const uint32_t den_reward_period = 11; //default 3600 second = 1 hour
+    const uint32_t den_reward_period_day = den_reward_period * 24;
     struct den_ping
     {
         //uint64_t mci;
