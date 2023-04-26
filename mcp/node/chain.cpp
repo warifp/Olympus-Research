@@ -492,7 +492,7 @@ void mcp::chain::try_advance(mcp::timeout_db_transaction & timeout_tx_a, std::sh
 			add_new_witness_list(transaction, m_last_stable_mci_internal);
 
 			///
-			ApplyWorkTransaction(timeout_tx_a, cache_a, m_last_stable_mci_internal);
+			//ApplyWorkTransaction(timeout_tx_a, cache_a, m_last_stable_mci_internal);
 		}
 		catch (std::exception const & e)
 		{
