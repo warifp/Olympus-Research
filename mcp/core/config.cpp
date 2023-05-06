@@ -4,7 +4,8 @@ mcp::mcp_networks mcp::mcp_network = mcp::mcp_networks::mcp_live_network;
 
 dev::u256 mcp::gas_price;
 uint64_t mcp::chain_id;
-dev::Address mcp::sys_contract;
+dev::Address mcp::DENManagerAddress;
+dev::Address mcp::DENContractAddress;
 
 bool mcp::is_test_network()
 {

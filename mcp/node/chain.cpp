@@ -12,6 +12,7 @@
 #include <mcp/node/approve_queue.hpp>
 #include <mcp/consensus/ledger.hpp>
 #include <mcp/core/den/den.hpp>
+#include "mcp/rpc/jsonHelper.hpp"
 
 #include <queue>
 
@@ -69,6 +70,12 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 			assert_x(result.second.statusCode());
 			cache_a->account_nonce_put(transaction, _t.sender(), _t.nonce());
 			cache_a->transaction_receipt_put(transaction, _t.sha3(), std::make_shared<dev::eth::TransactionReceipt>(result.second));
+
+			// auto _t2 = InitDenContractTransaction();
+			// std::pair<ExecutionResult, dev::eth::TransactionReceipt> result2 = execute(transaction, cache_a, _t2, mc_info, Permanence::Committed, dev::eth::OnOpFunc());
+			// assert_x(result2.second.statusCode());
+			// cache_a->account_nonce_put(transaction, _t2.sender(), _t2.nonce());
+			// cache_a->transaction_receipt_put(transaction, _t2.sha3(), std::make_shared<dev::eth::TransactionReceipt>(result2.second));
 		}
 		catch (const std::exception& e)
 		{
@@ -115,8 +122,6 @@ void mcp::chain::init(bool & error_a, mcp::timeout_db_transaction & timeout_tx_a
 	m_last_stable_epoch = mcp::epoch(m_last_stable_mci_internal);
 
 	update_cache();
-
-	m_den_mining_contract = right160(sha3(rlpList(mcp::sys_contract, 0)));
 	m_den->init(transaction);
 }
 
@@ -902,14 +907,6 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						dev::eth::McInfo mc_info(m_last_stable_index_internal, mci, mc_timestamp, mc_last_summary_mci);
 						//mcp::stopwatch_guard sw("set_block_stable2_1");
 						std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction_a, cache_a, *_t, mc_info, Permanence::Committed, dev::eth::OnOpFunc());
-						
-						
-						if(m_den_mining_contract == _t->to()){
-							m_den->handle_den_mining_event(result.second.log());
-						}
-						else{
-							LOG(m_log.info) << "handle_den_mining_event not in";
-						}
 
 						//// check if the execution is successful
 						//if (result.second.statusCode() == 0)
@@ -925,6 +922,28 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						RLPStream receiptRLP;
 						result.second.streamRLP(receiptRLP);
 						receipts.push_back(receiptRLP.out());
+						
+						if(DENContractAddress == _t->to()){
+							LOG(m_log.info) << "handle_den_mining_event in";
+							auto chain_ptr(shared_from_this());
+							chain_state c_state(transaction_a, 0, m_store, chain_ptr, cache_a);
+							TransactionSkeleton ts;
+							ts.from = DENManagerAddress;
+							ts.to = DENContractAddress;
+							ts.data = DENCaller.isMiner(jsToAddress("0x1144B522F45265C2DFDBAEE8E324719E63A1694C"));
+							ts.gasPrice = 0;
+							ts.gas = mcp::tx_max_gas;
+							ts.nonce = c_state.getNonce(ts.from);
+							Transaction _t(ts);
+							_t.setSignature(h256(0), h256(0), 0);
+							std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction_a, cache_a, _t, mc_info, Permanence::Uncommitted, dev::eth::OnOpFunc());
+							bool ret;
+							ret = DENCaller.getIsMiner(result.first.output);
+							LOG(m_log.info) << "getIsMiner return=" << ret << "output:" << dev::toHexPrefixed(result.first.output);
+						}
+						else{
+							LOG(m_log.info) << "handle_den_mining_event not in";
+						}
 					}
 					catch (dev::eth::NotEnoughCash const& _e)
 					{

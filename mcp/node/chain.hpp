@@ -129,7 +129,6 @@ namespace mcp
 		std::map<Epoch, std::map<h256, dev::ApproveReceipt>> vrf_outputs;
 		Signal<uint64_t const&> m_onMciStable; ///<  Called when a subsequent call to import transactions and ready.
 
-		Address m_den_mining_contract;
 		uint32_t m_cur_stable_time;
 
         mcp::log m_log = { mcp::log("node") };

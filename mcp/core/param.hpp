@@ -70,7 +70,6 @@ private:
 		b_param_v0.max_parent_size = 16;
 		b_param_v0.max_link_size = 4096;
 		block_param_map.insert({ 0, b_param_v0 });
-		std::string system_contract;
 
 		switch (mcp::mcp_network)
 		{
@@ -78,34 +77,37 @@ private:
 		{
 			chain_id = (uint64_t)9700;
 			gas_price = 10000000;
-			system_contract = "0xe93E689975A71304Ba51454D261Be925F88115f7";
+			DENManagerAddress =  dev::Address("0x1144b522f45265c2dfdbaee8e324719e63a1694c");
+			DENContractAddress = right160(sha3(rlpList(mcp::DENManagerAddress, 2)));
 			break;
 		}
 		case mcp::mcp_networks::mcp_test_network:
 		{
 			chain_id = (uint64_t)9700;
 			gas_price = 10000000;
-			system_contract = "0xe93E689975A71304Ba51454D261Be925F88115f7";
+			DENManagerAddress =  dev::Address("0x1144b522f45265c2dfdbaee8e324719e63a1694c");
+			DENContractAddress = right160(sha3(rlpList(mcp::DENManagerAddress, 2)));
 			break;
 		}
 		case mcp::mcp_networks::mcp_beta_network:
 		{
 			chain_id = (uint64_t)972;// Ascraeus 972; huygens 971
 			gas_price = 10000000;
-			system_contract = "0xe93E689975A71304Ba51454D261Be925F88115f7";
+			DENManagerAddress =  dev::Address("0x1144b522f45265c2dfdbaee8e324719e63a1694c");
+			DENContractAddress = right160(sha3(rlpList(mcp::DENManagerAddress, 2)));
 			break;
 		}
 		case mcp::mcp_networks::mcp_live_network:
 		{
 			chain_id = (uint64_t)970;
 			gas_price = (uint256_t)5e13;
-			system_contract = "0xe93E689975A71304Ba51454D261Be925F88115f7";
+			DENManagerAddress =  dev::Address("0x1144b522f45265c2dfdbaee8e324719e63a1694c");
+			DENContractAddress = right160(sha3(rlpList(mcp::DENManagerAddress, 2)));
 			break;
 		}
 		default:
 			assert_x_msg(false, "Invalid network");
 		}
-		sys_contract = dev::Address(system_contract);
 	}
 
 	static void init_witness_param()

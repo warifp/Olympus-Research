@@ -4,6 +4,7 @@
 #include <boost/endian/conversion.hpp>
 #include <mcp/common/common.hpp>
 #include <mcp/common/log.hpp>
+mcp::log g_log = { mcp::log("node") };
 
 mcp::Transaction::Transaction(TransactionSkeleton const& ts, boost::optional<Secret> const& s) :
 	m_nonce(ts.nonce),
@@ -61,7 +62,8 @@ mcp::Transaction::Transaction(dev::RLP const & rlp, CheckTransaction _checkSig)
 		auto const recoveryID =
 			m_chainId.is_initialized() ? byte(v - (u256(*m_chainId) * 2 + 35)) : byte(v - 27);
 		m_vrs = SignatureStruct{ r, s, recoveryID };
-
+		//std::cout << "SignatureStruct r=" << r.hexPrefixed() << " s=" << s.hexPrefixed() << " v=" << v.str();
+		LOG(g_log.debug) << "SignatureStruct r=" << r.hexPrefixed() << " s=" << s.hexPrefixed() << " v=" << v.str();
 		if (_checkSig >= CheckTransaction::Cheap && !m_vrs->isValid())
 			BOOST_THROW_EXCEPTION(InvalidSignature());
 
