@@ -15,8 +15,19 @@ namespace dev
 	{
 	public:
 		Event() {};
+		Event(std::string const& _Name, std::string const& _RawName, bool const& _Anonymous, Arguments const& _Inputs
+			//, std::string const& _str
+			, std::string const& _Sig, dev::h256 const& _ID
+		):
+			Name(_Name),
+			RawName(_RawName),
+			Anonymous(_Anonymous),
+			Inputs(_Inputs),
+			// str(_str),
+			Sig(_Sig),
+			ID(_ID)
+		{}
 
-	private:
 		/// Name is the event name used for internal representation. It's derived from
 		/// the raw name and a suffix will be added in the case of event overloading.
 		///
@@ -43,6 +54,11 @@ namespace dev
 		/// abi definition to identify event names and types.
 		dev::h256 ID;
 	};
-
+	
+	// NewEvent creates a new Event.
+	// It sanitizes the input arguments to remove unnamed arguments.
+	// It also precomputes the id, signature and string representation
+	// of the event.
+	Event NewEvent(std::string const& _name, std::string const& _RawName, bool  const& _anonymous, Arguments const& _Inputs);
 }
 

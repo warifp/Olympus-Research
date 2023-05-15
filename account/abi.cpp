@@ -57,9 +57,11 @@ namespace dev
 					BOOST_THROW_EXCEPTION(dev::FailedABI());
 				Receive = NewMethod("", "", FunctionType::Receive, field.StateMutability, field.Constant, field.Payable, Arguments(), Arguments());
 			}
-			//else if ("event" == field.Type)///do it in the future
-			//{
-			//}
+			else if ("event" == field.Type)
+			{
+				std::string name = ResolveNameConflict(field.Name, [this](std::string const& _name) { return Events.count(_name); });
+				Events[name] = NewEvent(name, field.Name, field.Anonymous, field.Inputs);
+			}
 			//else if ("error" == field.Type)///do it in the future
 			//{
 			//}

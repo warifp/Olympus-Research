@@ -67,7 +67,7 @@ namespace mcp
         bool calculate_rewards(const dev::Address &addr, const uint64_t time, dev::u256 &give_rewards, dev::u256 &frozen_rewards);
         void set_cur_time(const uint64_t &time);
         void set_mc_block_time(const uint64_t &time, const block_hash &h);
-        bool is_mining(const dev::Address &addr){ return m_den_units.find(addr) != m_den_units.end(); }
+        bool is_miner(const dev::Address &addr){ return m_den_units.find(addr) != m_den_units.end(); }
         uint64_t last_handle_ping_time(const dev::Address &addr);
         static bool need_ping(const dev::Address &addr, const block_hash &h);
         void init(mcp::db::db_transaction & transaction_a);

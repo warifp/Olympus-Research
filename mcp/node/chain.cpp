@@ -925,21 +925,23 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						
 						if(DENContractAddress == _t->to()){
 							LOG(m_log.info) << "handle_den_mining_event in";
-							auto chain_ptr(shared_from_this());
-							chain_state c_state(transaction_a, 0, m_store, chain_ptr, cache_a);
-							TransactionSkeleton ts;
-							ts.from = DENManagerAddress;
-							ts.to = DENContractAddress;
-							ts.data = DENCaller.isMiner(jsToAddress("0x1144B522F45265C2DFDBAEE8E324719E63A1694C"));
-							ts.gasPrice = 0;
-							ts.gas = mcp::tx_max_gas;
-							ts.nonce = c_state.getNonce(ts.from);
-							Transaction _t(ts);
-							_t.setSignature(h256(0), h256(0), 0);
-							std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction_a, cache_a, _t, mc_info, Permanence::Uncommitted, dev::eth::OnOpFunc());
-							bool ret;
-							ret = DENCaller.getIsMiner(result.first.output);
-							LOG(m_log.info) << "getIsMiner return=" << ret << "output:" << dev::toHexPrefixed(result.first.output);
+							m_den->handle_den_mining_event(result.second.log());
+
+							// auto chain_ptr(shared_from_this());
+							// chain_state c_state(transaction_a, 0, m_store, chain_ptr, cache_a);
+							// TransactionSkeleton ts;
+							// ts.from = DENManagerAddress;
+							// ts.to = DENContractAddress;
+							// ts.data = DENCaller.isMiner(jsToAddress("0x1144B522F45265C2DFDBAEE8E324719E63A1694C"));
+							// ts.gasPrice = 0;
+							// ts.gas = mcp::tx_max_gas;
+							// ts.nonce = c_state.getNonce(ts.from);
+							// Transaction _t(ts);
+							// _t.setSignature(h256(0), h256(0), 0);
+							// std::pair<ExecutionResult, dev::eth::TransactionReceipt> result = execute(transaction_a, cache_a, _t, mc_info, Permanence::Uncommitted, dev::eth::OnOpFunc());
+							// bool ret;
+							// ret = DENCaller.getIsMiner(result.first.output);
+							// LOG(m_log.info) << "getIsMiner return=" << ret << "output:" << dev::toHexPrefixed(result.first.output);
 						}
 						else{
 							LOG(m_log.info) << "handle_den_mining_event not in";

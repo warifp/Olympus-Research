@@ -49,6 +49,9 @@ namespace dev
 		template<typename... Args>
 		void Unpack(std::string const & name, dev::bytes const& data, Args&... result);
 
+		template<typename... Args>
+		void UnpackEvent(std::string const & name, dev::bytes const& data, Args&... result);
+
 	private:
 		Arguments getArguments(std::string const & name, dev::bytes const& data);
 		Method Constructor;
@@ -91,6 +94,16 @@ namespace dev
 	{
 		Arguments args = getArguments(name, data);
 		args.Unpack(data, result...);
+	}
+
+	/// Unpack unpacks the event according to the abi specification.
+	template<typename... Args>
+	inline void ABI::UnpackEvent(std::string const & name, dev::bytes const& data, Args&... result)
+	{
+		if (!Events.count(name))
+			BOOST_THROW_EXCEPTION(dev::FailedABI());
+		Event event = Events[name];
+		event.Inputs.Unpack(data, result...);
 	}
 
 	ABI JSON(std::string reader);

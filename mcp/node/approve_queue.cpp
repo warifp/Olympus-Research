@@ -331,7 +331,7 @@ namespace mcp
 		else{
 			mcp::db::db_transaction transaction(m_store.create_transaction());
 			mcp::block_hash block_hash;
-			if(!m_chain->m_den->is_mining(_t.sender())){
+			if(!m_chain->m_den->is_miner(_t.sender())){
 				LOG(m_log.error) << "[validateApprove] sender is not mining";
 				return ImportResult::Malformed;
 			}
