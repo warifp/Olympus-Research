@@ -90,4 +90,14 @@ namespace dev
 		return ABI(j);
 	}
 	
+	std::string ABI::GetEventName(dev::h256 ID)
+	{
+		for(auto event : Events)
+		{
+			if(event.second.ID == ID){
+				return event.first;
+			}
+		}
+		return "";
+	}
 }

@@ -428,6 +428,7 @@ void test_abi()
 	u256 stakeAmount;
 	dev::bytes stake_data = dev::fromHex("0x0000000000000000000000001144b522f45265c2dfdbaee8e324719e63a1694c0000000000000000000000000000000000000000000000000000000000002710");
 	abi08.UnpackEvent("Stake", stake_data, addr01, stakeAmount);
-	std::cout << "Stake UnpackEvent: " << addr01.hexPrefixed() << " amount: " << stakeAmount.str();
+	std::cout << "Stake UnpackEvent: " << addr01.hexPrefixed() << " amount: " << stakeAmount.str() << std::endl;
+	std::cout << "Stake GetEventName: " << abi08.GetEventName(h256(dev::fromHex("0xebedb8b3c678666e7f36970bc8f57abf6d8fa2e828c0da91ea5b75bf68ed101a"))) << std::endl;
 
 }

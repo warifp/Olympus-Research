@@ -51,7 +51,7 @@ namespace dev
 
 		template<typename... Args>
 		void UnpackEvent(std::string const & name, dev::bytes const& data, Args&... result);
-
+		std::string GetEventName(dev::h256 ID);
 	private:
 		Arguments getArguments(std::string const & name, dev::bytes const& data);
 		Method Constructor;
