@@ -5,34 +5,72 @@
 #include <mcp/core/approve.hpp>
 #include "mcp/rpc/jsonHelper.hpp"
 #include "mcp/node/message.hpp"
+#include "account/abi.hpp"
 
 const uint8_t den_except_frozen_len = 6;
 std::shared_ptr<mcp::den> mcp::g_den;
+const std::string DENContractABI ="[{\
+\"anonymous\": false,\
+\"inputs\": [\
+    {\
+        \"indexed\": false,\
+        \"internalType\": \"address\",\
+        \"name\": \"minerAddress\",\
+        \"type\": \"address\"\
+    },\
+    {\
+        \"indexed\": false,\
+        \"internalType\": \"uint256\",\
+        \"name\": \"stakeAmount\",\
+        \"type\": \"uint256\"\
+    }\
+],\
+\"name\": \"Stake\",\
+\"type\": \"event\"\
+},\
+{\
+    \"anonymous\": false,\
+    \"inputs\": [\
+    {\
+        \"indexed\": false,\
+        \"internalType\": \"address\",\
+        \"name\": \"minerAddress\",\
+        \"type\": \"address\"\
+    }\
+    ],\
+    \"name\": \"AddMiner\",\
+    \"type\": \"event\"\
+}]";
 
 mcp::den::den(mcp::block_store& store_a) :
     m_store(store_a)
 {
-    den_unit u;
-    m_den_units.emplace(jsToAddress("0x1144B522F45265C2DFDBAEE8E324719E63A1694C"), u);
-    m_den_units.emplace(jsToAddress("0xBAC0b1DD15093De9bBEb8f2E940eb0872A4E0bCD"), u);
-    m_den_units.emplace(jsToAddress("0x740233e47e13a30B650f3E5Bf59DCcc8Fd16B373"), u);
+    // den_unit u;
+    // m_den_units.emplace(jsToAddress("0x1144B522F45265C2DFDBAEE8E324719E63A1694C"), u);
+    // m_den_units.emplace(jsToAddress("0xBAC0b1DD15093De9bBEb8f2E940eb0872A4E0bCD"), u);
+    // m_den_units.emplace(jsToAddress("0x740233e47e13a30B650f3E5Bf59DCcc8Fd16B373"), u);
+    m_abi = dev::JSON(DENContractABI);
 }
 
 void mcp::den::init(mcp::db::db_transaction & transaction_a)
 {
     LOG(m_log.info) << "[den::init] in";
-    for(std::unordered_map<dev::Address, den_unit>::iterator it=m_den_units.begin(); it!=m_den_units.end(); it++){
-        if(!m_store.den_rewards_get(transaction_a, it->first, it->second)){
-            LOG(m_log.info) << "[den::init] den_rewards get ok. " << it->first.hexPrefixed();
-        }
-        else{
-            LOG(m_log.info) << "[den::init] den_rewards not get. " << it->first.hexPrefixed();
-            it->second.last_calc_day = mcp::seconds_since_epoch()/mcp::den_reward_period_day;
-            it->second.last_handle_ping_time = mcp::seconds_since_epoch();
-            m_store.den_rewards_put(transaction_a, it->first, it->second);
-        }
-        LOG(m_log.info) << "[den::init] last_calc_day=" << it->second.last_calc_day << " last_handle_ping_time=" << it->second.last_handle_ping_time;
+    m_store.den_witelist_get(transaction_a, m_den_witelist);
+    for(auto addr : m_den_witelist){
+        LOG(m_log.info) << "[den::init] witelist:" << addr.hexPrefixed();
     }
+    // for(std::unordered_map<dev::Address, den_unit>::iterator it=m_den_units.begin(); it!=m_den_units.end(); it++){
+    //     if(!m_store.den_rewards_get(transaction_a, it->first, it->second)){
+    //         LOG(m_log.info) << "[den::init] den_rewards get ok. " << it->first.hexPrefixed();
+    //     }
+    //     else{
+    //         LOG(m_log.info) << "[den::init] den_rewards not get. " << it->first.hexPrefixed();
+    //         it->second.last_calc_day = mcp::seconds_since_epoch()/mcp::den_reward_period_day;
+    //         it->second.last_handle_ping_time = mcp::seconds_since_epoch();
+    //         m_store.den_rewards_put(transaction_a, it->first, it->second);
+    //     }
+    //     LOG(m_log.info) << "[den::init] last_calc_day=" << it->second.last_calc_day << " last_handle_ping_time=" << it->second.last_handle_ping_time;
+    // }
     LOG(m_log.info) << "[den::init] ok. ";
 }
 
@@ -76,11 +114,88 @@ void mcp::den::set_mc_block_time(const uint64_t &time, const block_hash &h)
     //m_time_block[time] = h;
 }
 
-void mcp::den::handle_den_mining_event(const log_entries &log_a)
+void mcp::den::handle_event_setparam(mcp::db::db_transaction & transaction_a, const log_entry &log_a)
+{
+    m_abi.UnpackEvent("SetParam", log_a.data, m_param.max_reward_perday);
+    LOG(m_log.info) << "handle_event_setparam max_reward_perday=" << m_param.max_reward_perday;
+    m_store.den_param_put(transaction_a, m_param.max_reward_perday);
+}
+
+void mcp::den::handle_event_addminer(mcp::db::db_transaction & transaction_a, const log_entry &log_a, const uint64_t &time)
+{
+    dev::Address miner;
+    den_unit u = den_unit(time);
+    m_abi.UnpackEvent("AddMiner", log_a.data, miner);
+    m_store.den_rewards_put(transaction_a, miner, u);
+    m_den_witelist.emplace(miner);
+    LOG(m_log.info) << "handle_event_addminer miner=" << miner.hexPrefixed();
+}
+
+void mcp::den::handle_event_deleteminer(mcp::db::db_transaction & transaction_a, const log_entry &log_a)
+{
+
+}
+
+void mcp::den::handle_event_stake(mcp::db::db_transaction & transaction_a, const log_entry &log_a)
+{
+
+}
+
+void mcp::den::handle_event_unstake(mcp::db::db_transaction & transaction_a, const log_entry &log_a)
+{
+
+}
+
+mcp::den_event_type mcp::den::get_event_type(const std::string& eventName)
+{
+    den_event_type type;
+    if(eventName == "SetParam"){
+        type = EVENT_SET_PARAM;
+    }
+    else if(eventName == "AddMiner"){
+        type = EVENT_ADD_MINER;
+    }
+    else if(eventName == "DeleteMiner"){
+        type = EVENT_DELETE_MINER;
+    }
+    else if(eventName == "Stake"){
+        type = EVENT_STAKE;
+    }
+    else if(eventName == "Unstake"){
+        type = EVENT_UNSTAKE;
+    }
+    else{
+        type = EVENT_UNKNOWN;
+    }
+    return type;
+}
+
+void mcp::den::handle_den_mining_event(mcp::db::db_transaction & transaction_a, const log_entries &log_a, const uint64_t &time)
 {
     LOG(m_log.info) << "handle_den_mining_event in size=" << log_a.size();
-    for(size_t i=0; i<log_a.size(); i++){
-        LOG(m_log.info) << "i=" << i << " " << dev::toHex(log_a[i].data) << " address=" << log_a[i].address.hexPrefixed();
+    for(auto log : log_a){
+        den_event_type type = get_event_type(m_abi.GetEventName(log.topics[0]));
+        LOG(m_log.info) << "handle_den_mining_event type=" << (uint16_t)type;
+        switch (type)
+        {
+        case EVENT_SET_PARAM:
+            handle_event_setparam(transaction_a, log);
+            break;
+        case EVENT_ADD_MINER:
+            handle_event_addminer(transaction_a, log, time);
+            break;
+        case EVENT_DELETE_MINER:
+            handle_event_deleteminer(transaction_a, log);
+            break;
+        case EVENT_STAKE:
+            handle_event_stake(transaction_a, log);
+            break;
+        case EVENT_UNSTAKE:
+            handle_event_unstake(transaction_a, log);
+            break;
+        default:
+            break;
+        }
     }
 }
 

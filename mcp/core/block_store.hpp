@@ -179,12 +179,17 @@ namespace mcp
 		bool den_period_mc_get(mcp::db::db_transaction & transaction_a, uint32_t const & hour, mcp::block_hash & hash_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
 		void den_period_mc_put(mcp::db::db_transaction & transaction_a, uint32_t const & hour, mcp::block_hash const & hash_a);
 
-		void den_ping_get(mcp::db::db_transaction & transaction_a, mcp::Address const & addr_a, uint64_t const & hour_a, std::vector<h256> & hashs_a);
+		void den_ping_get(mcp::db::db_transaction & transaction_a, dev::Address const & addr_a, uint64_t const & hour_a, std::vector<h256> & hashs_a);
 		mcp::db::forward_iterator den_ping_begin(mcp::db::db_transaction & transaction_a, mcp::den_ping_key const & key_a);
 		void den_ping_put(mcp::db::db_transaction & transaction_a, mcp::den_ping_key const & key_a, h256 const &hash);
 
-		bool den_rewards_get(mcp::db::db_transaction & transaction_a, mcp::Address const & addr_a, mcp::den_unit & unit_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
-		void den_rewards_put(mcp::db::db_transaction & transaction_a, mcp::Address const & addr_a, mcp::den_unit & unit_a);
+		bool den_rewards_get(mcp::db::db_transaction & transaction_a, dev::Address const & addr_a, mcp::den_unit & unit_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
+		void den_rewards_put(mcp::db::db_transaction & transaction_a, dev::Address const & addr_a, mcp::den_unit & unit_a);
+
+		void den_witelist_get(mcp::db::db_transaction & transaction_a, std::unordered_set<dev::Address>& witelist_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
+
+		bool den_param_get(mcp::db::db_transaction & transaction_a, dev::u256& max_reward_perday, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
+		void den_param_put(mcp::db::db_transaction & transaction_a, const dev::u256& max_reward_perday);
 
 		mcp::db::db_transaction create_transaction(std::shared_ptr<rocksdb::WriteOptions> write_options_a = nullptr,
 			std::shared_ptr<rocksdb::TransactionOptions> txn_ops_a = nullptr)
@@ -293,5 +298,7 @@ namespace mcp
 		static dev::h256 const catchup_index;
 		//catch up max index key
 		static dev::h256 const catchup_max_index;
+		//catch up den_params index key
+		static dev::h256 const den_params_index;
 	};
 }

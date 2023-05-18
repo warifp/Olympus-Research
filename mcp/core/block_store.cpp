@@ -1181,7 +1181,7 @@ void mcp::block_store::den_period_mc_put(mcp::db::db_transaction & transaction_a
 	transaction_a.put(den_period_mc, mcp::h64_to_slice(h), mcp::h256_to_slice(hash_a));
 }
 
-void mcp::block_store::den_ping_get(mcp::db::db_transaction & transaction_a, mcp::Address const & addr_a, uint64_t const & hour_a, h256s & hashs_a)
+void mcp::block_store::den_ping_get(mcp::db::db_transaction & transaction_a, dev::Address const & addr_a, uint64_t const & hour_a, h256s & hashs_a)
 {
 	mcp::den_ping_key key(addr_a, hour_a);
 	mcp::db::forward_iterator it(transaction_a.begin(den_ping, key.val()));
@@ -1210,7 +1210,7 @@ void mcp::block_store::den_ping_put(mcp::db::db_transaction &transaction_a, mcp:
 	transaction_a.put(den_ping, key_a.val(), mcp::h256_to_slice(hash));
 }
 
-bool mcp::block_store::den_rewards_get(mcp::db::db_transaction & transaction_a, mcp::Address const & addr_a, mcp::den_unit & unit_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
+bool mcp::block_store::den_rewards_get(mcp::db::db_transaction & transaction_a, dev::Address const & addr_a, mcp::den_unit & unit_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {
 	std::string value;
 	bool exists(transaction_a.get(den_rewards, mcp::account_to_slice(addr_a), value, snapshot_a));
@@ -1222,7 +1222,7 @@ bool mcp::block_store::den_rewards_get(mcp::db::db_transaction & transaction_a, 
 	return !exists;
 }
 
-void mcp::block_store::den_rewards_put(mcp::db::db_transaction & transaction_a, mcp::Address const & addr_a, mcp::den_unit & unit_a)
+void mcp::block_store::den_rewards_put(mcp::db::db_transaction & transaction_a, dev::Address const & addr_a, mcp::den_unit & unit_a)
 {
 	// all parts of block except data
 	dev::bytes b_value;
@@ -1236,6 +1236,35 @@ void mcp::block_store::den_rewards_put(mcp::db::db_transaction & transaction_a, 
 	transaction_a.put(den_rewards, mcp::account_to_slice(addr_a), s_value);
 }
 
+void mcp::block_store::den_witelist_get(mcp::db::db_transaction & transaction_a, std::unordered_set<dev::Address>& witelist_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
+{
+	mcp::db::forward_iterator it(transaction_a.begin(den_rewards));
+	mcp::den_unit u;
+	while (true)
+	{
+		if (!it.valid())
+			break;
+		witelist_a.emplace(mcp::slice_to_account(it.key()));
+		++it;
+	}
+}
+
+bool mcp::block_store::den_param_get(mcp::db::db_transaction & transaction_a, dev::u256& max_reward_perday, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
+{
+	std::string value;
+	bool exists(transaction_a.get(prop, mcp::h256_to_slice(den_params_index), value, snapshot_a));
+	if (exists)
+	{
+		max_reward_perday = ((dev::h256::Arith)mcp::slice_to_h256(value)).convert_to<u256>();
+	}
+	return !exists;
+}
+
+void mcp::block_store::den_param_put(mcp::db::db_transaction & transaction_a, const dev::u256& max_reward_perday)
+{
+	transaction_a.put(prop, mcp::h256_to_slice(den_params_index), mcp::h256_to_slice(max_reward_perday));
+}
+
 dev::h256 const mcp::block_store::version_key(0);
 dev::h256 const mcp::block_store::genesis_hash_key(1);
 dev::h256 const mcp::block_store::genesis_transaction_hash_key(2);
@@ -1245,3 +1274,4 @@ dev::h256 const mcp::block_store::advance_info_key(5);
 dev::h256 const mcp::block_store::last_stable_index_key(6);
 dev::h256 const mcp::block_store::catchup_index(7);
 dev::h256 const mcp::block_store::catchup_max_index(8);
+dev::h256 const mcp::block_store::den_params_index(9);
