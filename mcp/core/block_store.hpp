@@ -185,6 +185,7 @@ namespace mcp
 
 		bool den_rewards_get(mcp::db::db_transaction & transaction_a, dev::Address const & addr_a, mcp::den_unit & unit_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
 		void den_rewards_put(mcp::db::db_transaction & transaction_a, dev::Address const & addr_a, mcp::den_unit & unit_a);
+		void den_rewards_del(mcp::db::db_transaction & transaction_a, dev::Address const & addr_a);
 
 		void den_witelist_get(mcp::db::db_transaction & transaction_a, std::unordered_set<dev::Address>& witelist_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
 

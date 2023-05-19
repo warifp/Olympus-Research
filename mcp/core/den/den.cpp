@@ -9,24 +9,19 @@
 
 const uint8_t den_except_frozen_len = 6;
 std::shared_ptr<mcp::den> mcp::g_den;
-const std::string DENContractABI ="[{\
-\"anonymous\": false,\
-\"inputs\": [\
+const std::string DENContractABI ="\
+[{\
+    \"anonymous\": false,\
+    \"inputs\": [\
     {\
         \"indexed\": false,\
         \"internalType\": \"address\",\
         \"name\": \"minerAddress\",\
         \"type\": \"address\"\
-    },\
-    {\
-        \"indexed\": false,\
-        \"internalType\": \"uint256\",\
-        \"name\": \"stakeAmount\",\
-        \"type\": \"uint256\"\
     }\
-],\
-\"name\": \"Stake\",\
-\"type\": \"event\"\
+    ],\
+    \"name\": \"AddMiner\",\
+    \"type\": \"event\"\
 },\
 {\
     \"anonymous\": false,\
@@ -38,7 +33,64 @@ const std::string DENContractABI ="[{\
         \"type\": \"address\"\
     }\
     ],\
-    \"name\": \"AddMiner\",\
+    \"name\": \"DeleteMiner\",\
+    \"type\": \"event\"\
+},\
+{\
+    \"anonymous\": false,\
+    \"inputs\": [\
+    {\
+        \"indexed\": false,\
+        \"internalType\": \"uint256\",\
+        \"name\": \"maxRewardPerDay\",\
+        \"type\": \"uint256\"\
+    }\
+    ],\
+    \"name\": \"SetParam\",\
+    \"type\": \"event\"\
+},\
+{\
+    \"anonymous\": false,\
+    \"inputs\": [\
+    {\
+        \"indexed\": false,\
+        \"internalType\": \"address\",\
+        \"name\": \"minerAddress\",\
+        \"type\": \"address\"\
+    },\
+    {\
+        \"indexed\": false,\
+        \"internalType\": \"uint256\",\
+        \"name\": \"stakeAmount\",\
+        \"type\": \"uint256\"\
+    },\
+    {\
+        \"indexed\": false,\
+        \"internalType\": \"uint256\",\
+        \"name\": \"maxStake\",\
+        \"type\": \"uint256\"\
+    }\
+    ],\
+    \"name\": \"Stake\",\
+    \"type\": \"event\"\
+},\
+{\
+    \"anonymous\": false,\
+    \"inputs\": [\
+    {\
+        \"indexed\": false,\
+        \"internalType\": \"address\",\
+        \"name\": \"minerAddress\",\
+        \"type\": \"address\"\
+    },\
+    {\
+        \"indexed\": false,\
+        \"internalType\": \"uint256\",\
+        \"name\": \"unstakeAmount\",\
+        \"type\": \"uint256\"\
+    }\
+    ],\
+    \"name\": \"Unstake\",\
     \"type\": \"event\"\
 }]";
 
@@ -55,6 +107,8 @@ mcp::den::den(mcp::block_store& store_a) :
 void mcp::den::init(mcp::db::db_transaction & transaction_a)
 {
     LOG(m_log.info) << "[den::init] in";
+    m_store.den_param_get(transaction_a, m_param.max_reward_perday);
+        LOG(m_log.info) << "[den::init] max_reward_perday:" << m_param.max_reward_perday.str();
     m_store.den_witelist_get(transaction_a, m_den_witelist);
     for(auto addr : m_den_witelist){
         LOG(m_log.info) << "[den::init] witelist:" << addr.hexPrefixed();
@@ -133,7 +187,11 @@ void mcp::den::handle_event_addminer(mcp::db::db_transaction & transaction_a, co
 
 void mcp::den::handle_event_deleteminer(mcp::db::db_transaction & transaction_a, const log_entry &log_a)
 {
-
+    dev::Address miner;
+    m_abi.UnpackEvent("DeleteMiner", log_a.data, miner);
+    m_store.den_rewards_del(transaction_a, miner);
+    m_den_witelist.erase(miner);
+    LOG(m_log.info) << "handle_event_addminer DeleteMiner=" << miner.hexPrefixed();
 }
 
 void mcp::den::handle_event_stake(mcp::db::db_transaction & transaction_a, const log_entry &log_a)
