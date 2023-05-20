@@ -79,12 +79,11 @@ namespace mcp
     public:
         den(mcp::block_store& store_a);
         void handle_den_mining_event(mcp::db::db_transaction & transaction_a, const log_entries &log_a, const uint64_t &time);
-        void handle_den_mining_ping(mcp::db::db_transaction & transaction_a, const dev::Address &addr, const uint64_t &time, bool ping, std::map<uint64_t, std::map<uint8_t, den_ping>>& pings);
+        void handle_den_mining_ping(mcp::db::db_transaction & transaction_a, const dev::Address &addr,  den_unit &u, const uint64_t &time, bool ping, std::map<uint64_t, std::map<uint8_t, den_ping>>& pings);
         bool calculate_rewards(const dev::Address &addr, const uint64_t time, dev::u256 &give_rewards, dev::u256 &frozen_rewards);
         void set_cur_time(const uint64_t &time);
         void set_mc_block_time(const uint64_t &time, const block_hash &h);
-        bool is_miner(const dev::Address &addr){ return m_den_units.find(addr) != m_den_units.end(); }
-        uint64_t last_handle_ping_time(const dev::Address &addr);
+        bool is_miner(const dev::Address &addr){ return m_den_witelist.find(addr) != m_den_witelist.end(); }
         static bool need_ping(const dev::Address &addr, const block_hash &h);
         void init(mcp::db::db_transaction & transaction_a);
     
@@ -104,7 +103,6 @@ namespace mcp
         den_event_type get_event_type(const std::string& eventName);
 
         den_param m_param;
-        std::unordered_map<dev::Address, den_unit> m_den_units;
         std::unordered_set<dev::Address> m_den_witelist;
         dev::ABI m_abi;
 		mcp::block_store & m_store;

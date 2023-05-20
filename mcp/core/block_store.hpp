@@ -182,6 +182,9 @@ namespace mcp
 		void den_ping_get(mcp::db::db_transaction & transaction_a, dev::Address const & addr_a, uint64_t const & hour_a, std::vector<h256> & hashs_a);
 		mcp::db::forward_iterator den_ping_begin(mcp::db::db_transaction & transaction_a, mcp::den_ping_key const & key_a);
 		void den_ping_put(mcp::db::db_transaction & transaction_a, mcp::den_ping_key const & key_a, h256 const &hash);
+		
+		bool den_last_ping_time_get(mcp::db::db_transaction & transaction_a, dev::Address const & addr_a, uint64_t & time, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
+		void den_last_ping_time_put(mcp::db::db_transaction & transaction_a, dev::Address const & addr_a, uint64_t const & time);
 
 		bool den_rewards_get(mcp::db::db_transaction & transaction_a, dev::Address const & addr_a, mcp::den_unit & unit_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
 		void den_rewards_put(mcp::db::db_transaction & transaction_a, dev::Address const & addr_a, mcp::den_unit & unit_a);
@@ -281,6 +284,7 @@ namespace mcp
 		//hour -> main chain block hash
 		int den_period_mc;
 		int den_ping;
+		int den_last_ping_time;
 		int den_rewards;
 
 		//genesis hash key
