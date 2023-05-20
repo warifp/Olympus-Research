@@ -48,8 +48,8 @@ namespace mcp
             last_calc_day = init_time / den_reward_period_day;
         }
         //dev::Address addr;
-        //uint64_t init_time;
-        uint32_t stake_factor = 0;  //rang [0,10000]
+        dev::u256 stakeAmount = 0;
+        dev::u256 maxStake = 0;
         dev::u256 rewards = 0; //storage
         std::map<uint64_t, den_reward_a_day> frozen; //storage <day, den_reward_a_day>
         uint64_t last_calc_day; //storage
@@ -96,11 +96,11 @@ namespace mcp
         void stake(const dev::Address &addr, dev::u256 &v);
         void unstake(const dev::Address &addr, dev::u256 &v);
 
-        void handle_event_setparam(mcp::db::db_transaction & transaction_a, const log_entry &log_a);
+        void handle_event_setparam(mcp::db::db_transaction & transaction_a, const log_entry &log_a, const uint64_t &time);
         void handle_event_addminer(mcp::db::db_transaction & transaction_a, const log_entry &log_a, const uint64_t &time);
         void handle_event_deleteminer(mcp::db::db_transaction & transaction_a, const log_entry &log_a);
-        void handle_event_stake(mcp::db::db_transaction & transaction_a, const log_entry &log_a);
-        void handle_event_unstake(mcp::db::db_transaction & transaction_a, const log_entry &log_a);
+        void handle_event_stake(mcp::db::db_transaction & transaction_a, const log_entry &log_a, const uint64_t &time);
+        void handle_event_unstake(mcp::db::db_transaction & transaction_a, const log_entry &log_a, const uint64_t &time);
         den_event_type get_event_type(const std::string& eventName);
 
         den_param m_param;

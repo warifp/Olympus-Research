@@ -7,7 +7,7 @@
 #include "mcp/node/message.hpp"
 #include "account/abi.hpp"
 
-const uint8_t den_except_frozen_len = 6;
+const uint8_t den_except_frozen_len = 8;
 std::shared_ptr<mcp::den> mcp::g_den;
 const std::string DENContractABI ="\
 [{\
@@ -168,7 +168,7 @@ void mcp::den::set_mc_block_time(const uint64_t &time, const block_hash &h)
     //m_time_block[time] = h;
 }
 
-void mcp::den::handle_event_setparam(mcp::db::db_transaction & transaction_a, const log_entry &log_a)
+void mcp::den::handle_event_setparam(mcp::db::db_transaction & transaction_a, const log_entry &log_a, const uint64_t &time)
 {
     m_abi.UnpackEvent("SetParam", log_a.data, m_param.max_reward_perday);
     LOG(m_log.info) << "handle_event_setparam max_reward_perday=" << m_param.max_reward_perday;
@@ -194,14 +194,43 @@ void mcp::den::handle_event_deleteminer(mcp::db::db_transaction & transaction_a,
     LOG(m_log.info) << "handle_event_addminer DeleteMiner=" << miner.hexPrefixed();
 }
 
-void mcp::den::handle_event_stake(mcp::db::db_transaction & transaction_a, const log_entry &log_a)
+void mcp::den::handle_event_stake(mcp::db::db_transaction & transaction_a, const log_entry &log_a, const uint64_t &time)
 {
+    dev::Address miner;
+    u256 stakeAmount;
+    u256 maxStake;
+    mcp::den_unit u;
+    m_abi.UnpackEvent("Stake", log_a.data, miner, stakeAmount, maxStake);
+    bool ret = m_store.den_rewards_get(transaction_a, miner, u);
+    assert(!ret);
 
+    dev::u256 give_rewards;
+    dev::u256 frozen_rewards;
+    calculate_rewards(miner, time, give_rewards, frozen_rewards);
+
+    u.stakeAmount = stakeAmount;
+    u.maxStake = maxStake;
+    m_store.den_rewards_put(transaction_a, miner, u);
+    LOG(m_log.info) << "handle_event_stake miner=" << miner.hexPrefixed() << " stakeAmount=" << stakeAmount.str() << " maxStake=" << maxStake.str();
 }
 
-void mcp::den::handle_event_unstake(mcp::db::db_transaction & transaction_a, const log_entry &log_a)
+void mcp::den::handle_event_unstake(mcp::db::db_transaction & transaction_a, const log_entry &log_a, const uint64_t &time)
 {
+    dev::Address miner;
+    u256 unstakeAmount;
+    mcp::den_unit u;
+    m_abi.UnpackEvent("Unstake", log_a.data, miner, unstakeAmount);
+    bool ret = m_store.den_rewards_get(transaction_a, miner, u);
+    assert(!ret);
+    assert(u.stakeAmount >= unstakeAmount);
 
+    dev::u256 give_rewards;
+    dev::u256 frozen_rewards;
+    calculate_rewards(miner, time, give_rewards, frozen_rewards);
+
+    u.stakeAmount -= unstakeAmount;
+    m_store.den_rewards_put(transaction_a, miner, u);
+    LOG(m_log.info) << "handle_event_unstake miner=" << miner.hexPrefixed() << " unstakeAmount=" << unstakeAmount.str() << " stakeAmount=" << u.stakeAmount.str() << " maxStake=" << u.maxStake.str();
 }
 
 mcp::den_event_type mcp::den::get_event_type(const std::string& eventName)
@@ -237,7 +266,7 @@ void mcp::den::handle_den_mining_event(mcp::db::db_transaction & transaction_a, 
         switch (type)
         {
         case EVENT_SET_PARAM:
-            handle_event_setparam(transaction_a, log);
+            handle_event_setparam(transaction_a, log, time);
             break;
         case EVENT_ADD_MINER:
             handle_event_addminer(transaction_a, log, time);
@@ -246,10 +275,10 @@ void mcp::den::handle_den_mining_event(mcp::db::db_transaction & transaction_a, 
             handle_event_deleteminer(transaction_a, log);
             break;
         case EVENT_STAKE:
-            handle_event_stake(transaction_a, log);
+            handle_event_stake(transaction_a, log, time);
             break;
         case EVENT_UNSTAKE:
-            handle_event_unstake(transaction_a, log);
+            handle_event_unstake(transaction_a, log, time);
             break;
         default:
             break;
@@ -335,7 +364,7 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
             handle_den_mining_ping(transaction, addr, cur_day*den_reward_period_day, false, pings);
         }
 
-        dev::u256 full_reward = m_param.max_reward_perday * u.stake_factor / 10000;
+        dev::u256 full_reward = m_param.max_reward_perday * u.stakeAmount / u.maxStake;
         bool & last_receive = u.last_receive;
 
         auto handle_no_ping_days = [&last_receive, &u, full_reward, this](uint64_t preday, uint64_t nextday){
@@ -521,8 +550,11 @@ void mcp::den_unit::rewards_get(dev::RLP const & rlp)
     no_ping_times = rlp[3].toInt<uint32_t>();
     ping_lose_time = rlp[4].toInt<uint32_t>();
     online_score = rlp[5].toInt<uint32_t>();
+    stakeAmount = rlp[6].toInt<u256>();
+    maxStake = rlp[7].toInt<u256>();
     LOG(m_log.info) << "[rewards_get] rewards=" << rewards.str() << " last_calc_day=" <<last_calc_day << " last_receive=" << last_receive;
     LOG(m_log.info) << "[rewards_get] no_ping_times=" << no_ping_times << " ping_lose_time=" << ping_lose_time << " online_score=" <<online_score;
+    LOG(m_log.info) << "[rewards_get] stakeAmount=" << stakeAmount.str() << " maxStake=" << maxStake.str();
     for(int n=0; n<count-den_except_frozen_len; n=n+2){
         frozen.emplace(last_calc_day-n-1, mcp::den_reward_a_day{rlp[n+den_except_frozen_len].toInt<u256>(), rlp[n+1+den_except_frozen_len].toInt<u256>()});
         LOG(m_log.info) << "[rewards_get] frozen day" << last_calc_day-n-1 << " frozen_reward=" << frozen[last_calc_day-n-1].frozen_reward << " release_a_day=" << frozen[last_calc_day-n-1].release_a_day;
@@ -534,7 +566,8 @@ void mcp::den_unit::rewards_streamRLP(RLPStream& s)
     s.appendList(den_except_frozen_len + frozen.size()*2);
     LOG(m_log.info) << "[rewards_streamRLP] rewards=" << rewards.str() << " last_calc_day=" <<last_calc_day << " last_receive=" << last_receive;
     LOG(m_log.info) << "[rewards_streamRLP] no_ping_times=" << no_ping_times << " ping_lose_time=" << ping_lose_time  << " online_score=" <<online_score;
-    s << rewards << last_calc_day << last_receive << no_ping_times << ping_lose_time << online_score;
+    LOG(m_log.info) << "[rewards_streamRLP] stakeAmount=" << stakeAmount.str() << " maxStake=" << maxStake.str();
+    s << rewards << last_calc_day << last_receive << no_ping_times << ping_lose_time << online_score << stakeAmount << maxStake;
     for(std::map<uint64_t, mcp::den_reward_a_day>::reverse_iterator it=frozen.rbegin(); it!=frozen.rend(); it++){
         s << it->second.release_a_day << it->second.frozen_reward;
         LOG(m_log.info) << "[rewards_streamRLP] frozen day=" << it->first << " frozen_reward=" << it->second.frozen_reward.str() << " release_a_day=" << it->second.release_a_day.str();
