@@ -354,7 +354,15 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
         handle_den_mining_ping(transaction, addr, u, cur_day*den_reward_period_day, false, pings);
     }
 
-    dev::u256 full_reward = m_param.max_reward_perday * u.stakeAmount / u.maxStake;
+    dev::u256 stake_factor;;
+    if(u.stakeAmount == 0){
+        stake_factor = 1500;
+    }
+    else{
+        assert(u.maxStake > 0);
+        stake_factor = 1500 + 8500 * u.stakeAmount / u.maxStake;
+    }
+    dev::u256 full_reward = m_param.max_reward_perday * stake_factor / 10000;
     bool & last_receive = u.last_receive;
 
     auto handle_no_ping_days = [&last_receive, &u, full_reward, this](uint64_t preday, uint64_t nextday){

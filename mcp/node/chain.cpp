@@ -923,7 +923,7 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 						result.second.streamRLP(receiptRLP);
 						receipts.push_back(receiptRLP.out());
 						
-						if((DENContractAddress == _t->to()) && (DENManagerAddress == _t->from())){
+						if(DENContractAddress == _t->to()){
 							LOG(m_log.info) << "handle_den_mining_event in";
 							m_den->handle_den_mining_event(transaction_a, result.second.log(), mc_timestamp);
 
