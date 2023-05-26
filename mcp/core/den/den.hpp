@@ -35,6 +35,7 @@ namespace mcp
         EVENT_DELETE_MINER,
         EVENT_STAKE,
         EVENT_UNSTAKE,
+        EVENT_SET_BONDING_POOL,
         EVENT_UNKNOWN
     };
 
@@ -110,6 +111,7 @@ namespace mcp
         void handle_event_deleteminer(mcp::db::db_transaction & transaction_a, const log_entry &log_a);
         void handle_event_stake(mcp::db::db_transaction & transaction_a, const log_entry &log_a, const uint64_t &time);
         void handle_event_unstake(mcp::db::db_transaction & transaction_a, const log_entry &log_a, const uint64_t &time);
+        void handle_event_setBondingPool(mcp::db::db_transaction & transaction_a, const log_entry &log_a, const uint64_t &time);
         den_event_type get_event_type(const std::string& eventName);
 
         den_param m_param;

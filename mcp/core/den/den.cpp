@@ -92,7 +92,27 @@ const std::string DENContractABI ="\
     ],\
     \"name\": \"Unstake\",\
     \"type\": \"event\"\
-}]";
+},\
+{\
+    \"anonymous\": false,\
+    \"inputs\": [\
+    {\
+        \"indexed\": false,\
+        \"internalType\": \"address\",\
+        \"name\": \"minerAddress\",\
+        \"type\": \"address\"\
+    },\
+    {\
+        \"indexed\": false,\
+        \"internalType\": \"uint256\",\
+        \"name\": \"id\",\
+        \"type\": \"uint256\"\
+    }\
+    ],\
+    \"name\": \"SetBondingPool\",\
+    \"type\": \"event\"\
+}\
+]";
 
 mcp::den::den(mcp::block_store& store_a) :
     m_store(store_a)
@@ -224,6 +244,21 @@ void mcp::den::handle_event_unstake(mcp::db::db_transaction & transaction_a, con
     LOG(m_log.info) << "handle_event_unstake miner=" << miner.hexPrefixed() << " unstakeAmount=" << unstakeAmount.str() << " stakeAmount=" << u.stakeAmount.str() << " maxStake=" << u.maxStake.str();
 }
 
+void mcp::den::handle_event_setBondingPool(mcp::db::db_transaction & transaction_a, const log_entry &log_a, const uint64_t &time)
+{
+    dev::Address miner;
+    int32_t id;
+    mcp::den_unit u;
+    m_abi.UnpackEvent("SetBondingPool", log_a.data, miner, id);
+    LOG(m_log.info) << "handle_event_setBondingPool miner=" << miner.hexPrefixed() << " id=" << id;
+    bool ret = m_store.den_rewards_get(transaction_a, miner, u);
+    assert(!ret);
+    assert(id == u.bondingPool.size());
+    u.bondingPool.resize(id+1);
+    u.bondingPool[id].startDay = time / mcp::den_reward_period_day;
+    m_store.den_rewards_put(transaction_a, miner, u);
+}
+
 mcp::den_event_type mcp::den::get_event_type(const std::string& eventName)
 {
     den_event_type type;
@@ -241,6 +276,9 @@ mcp::den_event_type mcp::den::get_event_type(const std::string& eventName)
     }
     else if(eventName == "Unstake"){
         type = EVENT_UNSTAKE;
+    }
+    else if(eventName == "SetBondingPool"){
+        type = EVENT_SET_BONDING_POOL;
     }
     else{
         type = EVENT_UNKNOWN;
@@ -270,6 +308,9 @@ void mcp::den::handle_den_mining_event(mcp::db::db_transaction & transaction_a, 
             break;
         case EVENT_UNSTAKE:
             handle_event_unstake(transaction_a, log, time);
+            break;
+        case EVENT_SET_BONDING_POOL:
+            handle_event_setBondingPool(transaction_a, log, time);
             break;
         default:
             break;
@@ -318,7 +359,7 @@ void mcp::den::handle_den_mining_ping(mcp::db::db_transaction & transaction_a, c
     LOG(m_log.info) << "handle_den_mining_ping out ";
 }
 
-bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, const uint64_t bondingPoolId, dev::u256 &give_rewards, dev::u256 &frozen_rewards)
+bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, const uint64_t id_a, dev::u256 &give_rewards, dev::u256 &frozen_rewards)
 {
     LOG(m_log.info) << "[calculate_rewards] in addr=" << addr.hexPrefixed() << " time=" << time << " day=" << time / den_reward_period_day;
     mcp::db::db_transaction transaction(m_store.create_transaction());
@@ -327,9 +368,9 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
     m_store.den_rewards_get(transaction, addr, u);
     uint64_t cur_day = time / den_reward_period_day;
     if(cur_day <= u.last_calc_day){
-        give_rewards = u.bondingPool[bondingPoolId].rewards;
+        give_rewards = u.bondingPool[id_a].rewards;
         frozen_rewards = 0;
-        for(auto &frozen : u.bondingPool[bondingPoolId].frozen){
+        for(auto &frozen : u.bondingPool[id_a].frozen){
             frozen_rewards += frozen.second.frozen_reward;
         }
         LOG(m_log.info) << "[calculate_rewards] give_rewards=" << give_rewards << " frozen_rewards=" << frozen_rewards;
@@ -515,7 +556,7 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
     }
     
 
-    give_rewards = u.bondingPool[bondingPoolId].rewards;
+    give_rewards = u.bondingPool[id_a].rewards;
     u.last_calc_day = time/mcp::den_reward_period_day;
 
     m_store.den_rewards_put(transaction, addr, u);
