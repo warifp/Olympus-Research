@@ -215,12 +215,14 @@ namespace
 		LOG(mcp::g_log.debug) << mcp::toHexPrefixed(_in);
 
 		dev::Address addr = dev::Address(_in.cropped(12, 20));
-		string s = FixedHash<4>(_in.cropped(60, 4)).hexPrefixed();
-		uint32_t time = std::stoi(s, nullptr, 16);
-		LOG(mcp::g_log.debug) << "[calculate_den_rewards] addr = " << addr.hexPrefixed() << " time=" << time;
+		string s1 = FixedHash<4>(_in.cropped(60, 4)).hexPrefixed();
+		uint32_t time = std::stoi(s1, nullptr, 16);
+		string s2 = FixedHash<4>(_in.cropped(92, 4)).hexPrefixed();
+		uint32_t pool_id = std::stoi(s2, nullptr, 16);
+		LOG(mcp::g_log.debug) << "[calculate_den_rewards] addr = " << addr.hexPrefixed() << " time=" << time << " pool_id=" << pool_id;
 		dev::u256 give_rewards;
 		dev::u256 frozen_rewards;
-		mcp::g_den->calculate_rewards(addr, time, give_rewards, frozen_rewards);
+		mcp::g_den->calculate_rewards(addr, time, pool_id, give_rewards, frozen_rewards);
 		LOG(mcp::g_log.debug) << "[calculate_den_rewards] give_rewards = " << give_rewards.str() << " frozen_rewards=" << frozen_rewards.str();
 		
 		bytes give = h256{give_rewards}.asBytes();

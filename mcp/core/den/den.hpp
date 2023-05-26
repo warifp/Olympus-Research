@@ -37,6 +37,13 @@ namespace mcp
         EVENT_UNSTAKE,
         EVENT_UNKNOWN
     };
+
+    struct den_bonding_pool
+    {
+        uint64_t startDay;
+        dev::u256 rewards = 0;
+        std::map<uint64_t, den_reward_a_day> frozen; //storage <day, den_reward_a_day>
+    };
     
     class den_unit
     {
@@ -46,12 +53,13 @@ namespace mcp
         {
             last_handle_ping_time = init_time;
             last_calc_day = init_time / den_reward_period_day;
+            bondingPool.resize(1);
+            bondingPool[0].startDay = last_calc_day;
         }
         //dev::Address addr;
         dev::u256 stakeAmount = 0;
         dev::u256 maxStake = 0;
-        dev::u256 rewards = 0; //storage
-        std::map<uint64_t, den_reward_a_day> frozen; //storage <day, den_reward_a_day>
+        //dev::u256 rewards = 0; //storage
         uint64_t last_calc_day; //storage
 
         bool last_receive = false;  //true: last ping received. false: last ping not received. storage
@@ -59,9 +67,11 @@ namespace mcp
         uint32_t no_ping_times = 0; //storage
         uint32_t ping_lose_time = 0; //storage
         uint32_t online_score = 10000;  //rang [0,10000]  storage
+        std::vector<den_bonding_pool> bondingPool;
 
         void rewards_get(dev::RLP const & rlp);
 		void rewards_streamRLP(RLPStream& s);
+        uint64_t bondingPoolId(uint64_t day);
 
     private:
         mcp::log m_log = { mcp::log("node") };
@@ -80,7 +90,7 @@ namespace mcp
         den(mcp::block_store& store_a);
         void handle_den_mining_event(mcp::db::db_transaction & transaction_a, const log_entries &log_a, const uint64_t &time);
         void handle_den_mining_ping(mcp::db::db_transaction & transaction_a, const dev::Address &addr,  den_unit &u, const uint64_t &time, bool ping, std::map<uint64_t, std::map<uint8_t, den_ping>>& pings);
-        bool calculate_rewards(const dev::Address &addr, const uint64_t time, dev::u256 &give_rewards, dev::u256 &frozen_rewards);
+        bool calculate_rewards(const dev::Address &addr, const uint64_t time, const uint64_t bondingPoolId, dev::u256 &give_rewards, dev::u256 &frozen_rewards);
         void set_cur_time(const uint64_t &time);
         void set_mc_block_time(const uint64_t &time, const block_hash &h);
         bool is_miner(const dev::Address &addr){ return m_den_witelist.find(addr) != m_den_witelist.end(); }

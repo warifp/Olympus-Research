@@ -2484,12 +2484,6 @@ void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 	{
 		epoch = (uint64_t)jsToInt(request["epoch"]);
 	}
-	// add by Jeremy. For test.
-	if(epoch == 1){
-		dev::u256 give_rewards;
-		dev::u256 frozen_rewards;
-		m_chain->m_den->calculate_rewards(dev::Address("0x1144B522F45265C2DFDBAEE8E324719E63A1694C"), mcp::seconds_since_epoch(), give_rewards, frozen_rewards);
-	}
 
 	if (epoch > m_chain->last_epoch())
 	{
