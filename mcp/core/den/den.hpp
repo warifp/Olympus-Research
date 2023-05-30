@@ -41,9 +41,15 @@ namespace mcp
 
     struct den_bonding_pool
     {
-        uint64_t startDay;
+        //uint64_t startDay;
         dev::u256 rewards = 0;
         std::map<uint64_t, den_reward_a_day> frozen; //storage <day, den_reward_a_day>
+    };
+
+    struct bonding_pool_plan
+    {
+        uint64_t startDay;
+        uint32_t id;
     };
     
     class den_unit
@@ -54,8 +60,8 @@ namespace mcp
         {
             last_handle_ping_time = init_time;
             last_calc_day = init_time / den_reward_period_day;
-            bondingPool.resize(1);
-            bondingPool[0].startDay = last_calc_day;
+            bondingPool.emplace_back(den_bonding_pool{0, std::map<uint64_t, den_reward_a_day>{}});
+            plan.emplace_back(bonding_pool_plan{last_calc_day, 0});
         }
         //dev::Address addr;
         dev::u256 stakeAmount = 0;
@@ -69,6 +75,7 @@ namespace mcp
         uint32_t ping_lose_time = 0; //storage
         uint32_t online_score = 10000;  //rang [0,10000]  storage
         std::vector<den_bonding_pool> bondingPool;
+        std::vector<bonding_pool_plan> plan;
 
         void rewards_get(dev::RLP const & rlp);
 		void rewards_streamRLP(RLPStream& s);
