@@ -181,6 +181,11 @@ void mcp::den::set_mc_block_time(const uint64_t &time, const block_hash &h)
 
 void mcp::den::handle_event_setparam(mcp::db::db_transaction & transaction_a, const log_entry &log_a, const uint64_t &time)
 {
+    for(auto miner : m_den_witelist){
+        dev::u256 give_rewards;
+        dev::u256 frozen_rewards;
+        calculate_rewards(miner, time, 0, give_rewards, frozen_rewards);
+    }
     m_abi.UnpackEvent("SetParam", log_a.data, m_param.max_reward_perday);
     LOG(m_log.info) << "handle_event_setparam max_reward_perday=" << m_param.max_reward_perday;
     m_store.den_param_put(transaction_a, m_param.max_reward_perday);
