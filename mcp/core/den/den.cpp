@@ -7,6 +7,8 @@
 #include "mcp/node/message.hpp"
 #include "account/abi.hpp"
 
+using namespace mcp;
+
 const uint8_t den_except_frozen_len = 9;
 std::shared_ptr<mcp::den> mcp::g_den;
 const std::string DENContractABI ="\
@@ -392,10 +394,11 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
     //for X/24*24, need get all days ping, and den_rewards_put save the status in the end of last day.
     m_store.den_ping_get(transaction, addr, u.last_calc_day*24, hashs);
     for(auto h : hashs){
-        std::shared_ptr<mcp::approve> a = m_store.approve_get(transaction, h);
+        std::shared_ptr<mcp::denMiningApprove> a = std::dynamic_pointer_cast<mcp::denMiningApprove>(m_store.approve_get(transaction, h));
         std::shared_ptr<mcp::block> b = m_store.block_get(transaction, a->hash());
         LOG(m_log.info) << "[calculate_rewards] ping mci:" << a->mci() << " hashs:" << a->hash().hexPrefixed();
         if(b->exec_timestamp()/den_reward_period_day < cur_day){
+            LOG(m_log.info) << "[calculate_rewards] den_reward_period_day:" << den_reward_period_day;
             handle_den_mining_ping(transaction, addr, u, b->exec_timestamp(), true, pings);
         }
         else{

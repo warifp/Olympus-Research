@@ -262,11 +262,9 @@ void mcp::chain::save_approve(mcp::timeout_db_transaction & timeout_tx_a, std::s
 
 				//save approve, need put first
 				cache_a->approve_put(transaction, t_a);
-				if(t_a->type() == mcp::approve::WitnessElection){
-					m_store.epoch_approves_put(transaction, mcp::epoch_approves_key(t_a->epoch(), t_a->sha3()));
-				}
-				else{
-					//save approve and time
+				if(t_a->type() == mcp::WitnessElection){
+        			std::shared_ptr<mcp::witnessElectionApprove> a = std::dynamic_pointer_cast<mcp::witnessElectionApprove>(t_a);
+					m_store.epoch_approves_put(transaction, mcp::epoch_approves_key(a->epoch(), a->sha3()));
 				}
 				m_store.approve_unstable_count_add(transaction);
 				//LOG(m_log.debug) << "approve_unstable: add " << m_store.approve_unstable_count(transaction);
@@ -1014,53 +1012,58 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 					assert_x(ap);
 					/// exec approves
 					try{
-						if(ap->type() == mcp::approve::WitnessElection)
+						if(ap->type() == mcp::WitnessElection)
 						{
+        					auto a = std::dynamic_pointer_cast<mcp::witnessElectionApprove>(ap);
 							/// exec approve can reduce, if two or more block linked a approve,reduce once.
 							m_store.approve_unstable_count_reduce(transaction_a);
 							//LOG(m_log.debug) << "approve_unstable: reduce " << m_store.approve_unstable_count(transaction_a);
 
-							if (ap->outputs() == h256(0))/// reboot system. approve read from db,but not cache outputs
+							if (a->outputs() == h256(0))/// reboot system. approve read from db,but not cache outputs
 							{
 								mcp::block_hash hash;
-								if (ap->epoch() <= 1) {
+								if (a->epoch() <= 1) {
 									hash = mcp::genesis::block_hash;
 								}
 								else {
-									bool exists(!m_store.main_chain_get(transaction_a, (ap->epoch() - 1)*epoch_period, hash));
+									bool exists(!m_store.main_chain_get(transaction_a, (a->epoch() - 1)*epoch_period, hash));
 									assert_x(exists);
 								}
-								ap->vrf_verify(hash);///cached outputs.must successed.
+								a->vrf_verify(hash);///cached outputs.must successed.
 							}
-							std::shared_ptr<dev::ApproveReceipt> preceipt = std::make_shared<dev::ApproveReceipt>(ap->sender(), ap->outputs());
+							std::shared_ptr<dev::ApproveReceipt> preceipt = std::make_shared<dev::ApproveReceipt>(a->sender(), a->outputs());
 							cache_a->approve_receipt_put(transaction_a, approve_hash, preceipt);
 						
 							///the approve which is smaller than the current epoch, is not eligible for election.
 							///Bigger than the present is problematic
 							//LOG(m_log.debug) << "[vrf_outputs] ap epoch:" << ap->epoch() <<",epoch:" << epoch(mci)
 							//	<< ",address:" << preceipt->from().hexPrefixed();
-							if (ap->epoch() == epoch(mci))
+							if (a->epoch() == epoch(mci))
 							{
-								vrf_outputs[ap->epoch()].insert(std::make_pair(ap->outputs(), *preceipt));
+								vrf_outputs[a->epoch()].insert(std::make_pair(a->outputs(), *preceipt));
 							}
 
 							RLPStream receiptRLP;
 							preceipt->streamRLP(receiptRLP);
 							receipts.push_back(receiptRLP.out());
 						}
-						else{
+						else if(ap->type() == mcp::DENMiningPing){
+        					auto a = std::dynamic_pointer_cast<mcp::denMiningApprove>(ap);
 							LOG(m_log.info) << "[advance_stable_mci] DENMiningPing in";
-							std::shared_ptr<mcp::block> block = m_store.block_get(transaction_a, ap->hash());
+							std::shared_ptr<mcp::block> block = m_store.block_get(transaction_a, a->hash());
 
 							// if(mc_timestamp - block->exec_timestamp() > den_reward_period){
 							// 	LOG(m_log.info) << "[advance_stable_mci] den's ping too late to stable";
 							// }
 							// else{
-								LOG(m_log.info) << "[advance_stable_mci] den_ping_put hour=" << block->exec_timestamp()/den_reward_period << " hash=" << ap->hash().hexPrefixed();
-								m_store.den_ping_put(transaction_a, mcp::den_ping_key(ap->sender(), block->exec_timestamp()/den_reward_period), ap->sha3());
-								m_store.den_last_ping_time_put(transaction_a, ap->sender(), block->exec_timestamp());
-								LOG(m_log.info) << "[advance_stable_mci] den_last_ping_time_put time=" << block->exec_timestamp() << "ap->sender()=" << ap->sender().hexPrefixed();
+								LOG(m_log.info) << "[advance_stable_mci] den_ping_put hour=" << block->exec_timestamp()/den_reward_period << " hash=" << a->hash().hexPrefixed();
+								m_store.den_ping_put(transaction_a, mcp::den_ping_key(a->sender(), block->exec_timestamp()/den_reward_period), a->sha3());
+								m_store.den_last_ping_time_put(transaction_a, a->sender(), block->exec_timestamp());
+								LOG(m_log.info) << "[advance_stable_mci] den_last_ping_time_put time=" << block->exec_timestamp() << "a->sender()=" << a->sender().hexPrefixed();
 							// }
+						}
+						else{
+							assert(false);
 						}
 					}
 					catch (std::exception const& _e)

@@ -270,7 +270,7 @@ mcp::hash_tree_response_message::summary_items::summary_items(bool & error_a, de
 		}
 		for (dev::RLP const & ar : r[12])
 		{
-			auto a = std::make_shared<mcp::approve>(ar, CheckTransaction::Everything);
+			auto a = mcp::approveFromRLP(ar, CheckTransaction::Everything);
 			approves.push_back(a);
 		}
 	}

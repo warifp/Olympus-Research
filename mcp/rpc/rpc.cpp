@@ -2499,10 +2499,11 @@ void mcp::rpc_handler::epoch_approves(mcp::json &j_response, bool &)
 	{
 		auto approve = m_cache->approve_get(transaction, hash);
 		if (approve) {
+			auto a = dynamic_cast<mcp::witnessElectionApprove*>(approve.get());
 			mcp::json approve_l;
-			approve_l["hash"] = approve->sha3().hexPrefixed();
-			approve_l["from"] = approve->sender().hexPrefixed();
-			approve_l["proof"] = approve->proof().hexPrefixed();
+			approve_l["hash"] = a->sha3().hexPrefixed();
+			approve_l["from"] = a->sender().hexPrefixed();
+			approve_l["proof"] = a->proof().hexPrefixed();
 			approves_l.push_back(approve_l);
 		}
 		else {
@@ -2609,7 +2610,7 @@ void mcp::rpc_handler::dss_sendRawMiningPing(mcp::json &j_response, bool &async)
 
 	try
 	{
-		approve t(jsToBytes(params[0], OnFailed::Throw), CheckTransaction::None);
+		denMiningApprove t(jsToBytes(params[0], OnFailed::Throw), CheckTransaction::None);
 		j_response["result"] = toJS(m_wallet->importTransaction(t));
 	}
 	catch (dev::Exception &e)

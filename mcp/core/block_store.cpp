@@ -321,7 +321,7 @@ std::shared_ptr<mcp::approve> mcp::block_store::approve_get(mcp::db::db_transact
 	if (exists)
 	{
 		dev::RLP r(value);
-		result = std::make_shared<mcp::approve>(r,CheckTransaction::None);
+		result = mcp::approveFromRLP(r, CheckTransaction::None);
 	}
 	return result;
 }

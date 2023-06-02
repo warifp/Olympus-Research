@@ -41,7 +41,7 @@ public:
 	h256 send_action(DenMiningSkeleton t, boost::optional<std::string> const & password);
 	/// Imports the given transaction into the transaction queue
 	h256 importTransaction(Transaction const& _t);
-	h256 importTransaction(approve const& _t);
+	h256 importTransaction(denMiningApprove const& _t);
 	u256 getTransactionCount(Address const& from, BlockNumber const blockTag = PendingBlock);
 	void stop();
 

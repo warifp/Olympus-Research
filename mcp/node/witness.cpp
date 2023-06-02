@@ -218,7 +218,7 @@ void mcp::witness::try_create_approve(uint64_t const& mci)
 			return;
 		}
 
-		auto ap = std::make_shared<approve>(epoch, proof, m_secret);
+		auto ap = std::make_shared<witnessElectionApprove>(epoch, proof, m_secret);
 		if (!m_cache->approve_exists(transaction, ap->sha3()))///maybe send but not execute
 		{
 			LOG(m_log.debug) << "[send_approve] m_last_summary_mci=" << mci << " epoch=" << epoch;

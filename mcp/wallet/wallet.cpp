@@ -71,7 +71,7 @@ h256 mcp::wallet::send_action(DenMiningSkeleton t, boost::optional<std::string> 
 	if (!ar.first)
 	{
 		t.from = dev::toAddress(ar.second);
-		approve ts(t, ar.second);
+		denMiningApprove ts(t, ar.second);
 		LOG(m_log.info) << "Den mining send_action:" << toHexPrefixed(ts.rlp());
 		return importTransaction(ts);
 	}
@@ -106,9 +106,9 @@ h256 mcp::wallet::importTransaction(Transaction const& _t)
 	return _t.sha3();
 }
 
-h256 mcp::wallet::importTransaction(approve const& _t)
+h256 mcp::wallet::importTransaction(mcp::denMiningApprove const& _t)
 {
-	ImportResult res = m_aq->import(std::make_shared<approve>(_t), source::local);
+	ImportResult res = m_aq->import(std::make_shared<mcp::denMiningApprove>(_t), source::local);
 	switch (res)
 	{
 	case ImportResult::Success:

@@ -23,38 +23,14 @@ namespace mcp
 		block_hash hash;
 	};
 	
+	enum ApproveType {WitnessElection=0, DENMiningPing=1};
+	
 	class approve
 	{
 	public:
-		enum ApproveType {WitnessElection=0, DENMiningPing=1};
 
-		struct witness_election{
-			witness_election(Epoch epoch, h648 proof){
-				m_epoch = epoch;
-				m_proof = proof;
-			}
-			Epoch m_epoch;
-			h648 m_proof;
-			mutable dev::PublicCompressed m_publicCompressed;
-			mutable h256 m_outputs;			    ///< Cached output of proof.
-		};
-
-		approve() {}
-
-		/// Constructs a transaction from a transaction skeleton & optional secret.
-		approve(Epoch const & _epoch, h648 const & _proof, Secret const& _s);
-		approve(DenMiningSkeleton _d, Secret const& _s);
-
-		/// Constructs a approve from the given RLP.
-		approve(dev::RLP const & r, CheckTransaction _checkSig);
-
-		/// Constructs a transaction from the given RLP.
-		explicit approve(bytesConstRef _rlp, CheckTransaction _checkSig) : approve(RLP(_rlp), _checkSig) {}
-
-		/// Constructs a Transaction from the given RLP.
-		explicit approve(bytes const& _rlp, CheckTransaction _checkSig) : approve(&_rlp, _checkSig) {}
-
-		ApproveType type() const { return m_type; }
+		approve() : m_chainId(mcp::chain_id) 
+		{}
 
 		/// @returns sender of the transaction from the signature (and hash).
 		/// @throws TransactionIsUnsigned if signature was not initialized
@@ -67,15 +43,6 @@ namespace mcp
 		/// @throws InvalidSignature if the transaction is replay protected
 		/// and chain id is not equal to @a _chainId
 		void checkChainId(uint64_t _chainId) const;
-
-		void checkEpoch(uint64_t _epoch) const;
-
-		/// Serialises this approve to an RLPStream.
-		/// @throws TransactionIsUnsigned if including signature was requested but it was not initialized
-		void streamRLP(RLPStream& s, IncludeSignature sig = WithSignature) const;
-
-		/// @returns the RLP serialisation of this transaction.
-		bytes rlp(IncludeSignature _sig = WithSignature) const { RLPStream s; streamRLP(s, _sig); return s.out(); }
 
 		/// @returns the SHA3 hash of the RLP serialisation of this approve.
 		/// queue used WithSignature hash inlcude sinature,if sinature error,can resend it again with the correct signature
@@ -93,24 +60,86 @@ namespace mcp
 		u256 rawV() const;
 
 		void sign(Secret const& _priv);			///< Sign the transaction.
-
-		void vrf_verify(mcp::block_hash const& msg) const;
-		h256 outputs() { assert(m_type == WitnessElection); return m_witnessElection->m_outputs; }
 		
-		Epoch epoch() const { assert(m_type == WitnessElection); return m_witnessElection->m_epoch; }
-		h648 proof() const { assert(m_type == WitnessElection); return m_witnessElection->m_proof; }
-
-		uint64_t mci() const { assert(m_type == DENMiningPing); return m_den_mining_ping->mci; }
-		block_hash hash() const { assert(m_type == DENMiningPing); return m_den_mining_ping->hash; }
-		
-	private:
-		ApproveType m_type;
-		boost::optional<witness_election> m_witnessElection;
-		boost::optional<den_mining_ping> m_den_mining_ping;
+		virtual ApproveType type() const = 0;
+		virtual void streamRLP(dev::RLPStream& s, IncludeSignature sig = WithSignature) const = 0;
 
 		SignatureStruct m_vrs;	///< The signature of the approve. Encodes the sender.
 		uint64_t m_chainId;
 		mutable h256 m_hashWith;			///< Cached hash of approve with signature.
+		mutable dev::PublicCompressed m_publicCompressed;
 		mutable boost::optional<Address> m_sender;  ///< Cached sender, determined from signature.
 	};
+
+	class witnessElectionApprove : public approve
+	{
+	public:
+
+		/// Constructs a transaction from a transaction skeleton & optional secret.
+		witnessElectionApprove(Epoch const & _epoch, h648 const & _proof, Secret const& _s);
+
+		/// Constructs a approve from the given RLP.
+		witnessElectionApprove(dev::RLP const & r, CheckTransaction _checkSig);
+
+		/// Constructs a transaction from the given RLP.
+		explicit witnessElectionApprove(bytesConstRef _rlp, CheckTransaction _checkSig) : witnessElectionApprove(RLP(_rlp), _checkSig) {}
+
+		/// Constructs a Transaction from the given RLP.
+		explicit witnessElectionApprove(bytes const& _rlp, CheckTransaction _checkSig) : witnessElectionApprove(&_rlp, _checkSig) {}
+
+		ApproveType type() const { return ApproveType::WitnessElection; }
+
+		void checkEpoch(uint64_t _epoch) const;
+
+		/// Serialises this approve to an RLPStream.
+		/// @throws TransactionIsUnsigned if including signature was requested but it was not initialized
+		void streamRLP(dev::RLPStream& s, IncludeSignature sig = WithSignature) const;
+
+		/// @returns the RLP serialisation of this transaction.
+		bytes rlp(IncludeSignature _sig = WithSignature) const { RLPStream s; streamRLP(s, _sig); return s.out(); }
+
+		void vrf_verify(mcp::block_hash const& msg) const;
+		
+		h256 outputs() { return m_outputs; }
+		Epoch epoch() const { return m_epoch; }
+		h648 proof() const { return m_proof; }
+
+	private:
+		Epoch m_epoch;
+		h648 m_proof;
+		mutable h256 m_outputs;			    ///< Cached output of proof.
+	};
+
+	class denMiningApprove : public approve
+	{
+	public:
+		denMiningApprove(DenMiningSkeleton _d, Secret const& _s);
+
+		/// Constructs a approve from the given RLP.
+		denMiningApprove(dev::RLP const & r, CheckTransaction _checkSig);
+
+		/// Constructs a transaction from the given RLP.
+		explicit denMiningApprove(bytesConstRef _rlp, CheckTransaction _checkSig) : denMiningApprove(RLP(_rlp), _checkSig) {}
+
+		/// Constructs a Transaction from the given RLP.
+		explicit denMiningApprove(bytes const& _rlp, CheckTransaction _checkSig) : denMiningApprove(&_rlp, _checkSig) {}
+
+		ApproveType type() const { return ApproveType::DENMiningPing; }
+
+		/// Serialises this approve to an RLPStream.
+		/// @throws TransactionIsUnsigned if including signature was requested but it was not initialized
+		void streamRLP(dev::RLPStream& s, IncludeSignature sig = WithSignature) const;
+
+		/// @returns the RLP serialisation of this transaction.
+		bytes rlp(IncludeSignature _sig = WithSignature) const { RLPStream s; streamRLP(s, _sig); return s.out(); }
+
+		uint64_t mci() const { return m_mci; }
+		block_hash hash() const { return m_hash; }
+
+	private:
+		uint64_t m_mci;
+		block_hash m_hash;
+	};
+
+	std::shared_ptr<approve> approveFromRLP(dev::RLP const & r, CheckTransaction _checkSig);
 }

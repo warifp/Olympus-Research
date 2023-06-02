@@ -381,17 +381,17 @@ bool mcp::node_capability::read_packet(std::shared_ptr<p2p::peer> peer_a, unsign
 			}
 			try
 			{
-				approve ap(r[0], CheckTransaction::Cheap);///Signature will be checked later
+				std::shared_ptr<mcp::approve> ap = mcp::approveFromRLP(r[0], CheckTransaction::Cheap);
 				auto _f = source::broadcast;
 				{
-					if (RequestingMageger.try_erase(ap.sha3()))
+					if (RequestingMageger.try_erase(ap->sha3()))
 						_f = source::request;
 				}
 				if (mcp::node_sync::is_syncing() && _f == source::broadcast)
 					return true;
-				mark_as_known_approve(peer_a->remote_node_id(), ap.sha3());
+				mark_as_known_approve(peer_a->remote_node_id(), ap->sha3());
 				mcp::CapMetricsRecieved.approve++;
-				m_aq->enqueue(std::make_shared<approve>(ap), peer_a->remote_node_id(), _f);
+				m_aq->enqueue(ap, peer_a->remote_node_id(), _f);
 			}
 			catch (...)///Malformed approve
 			{

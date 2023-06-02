@@ -57,14 +57,23 @@ namespace mcp
 		{	
 			if (all.count(_approve->sha3()))
 				assert_x(false);
-
-			if(_approve->type() == mcp::approve::WitnessElection){
-				if (!queue.count(_approve->epoch()))
-					queue[_approve->epoch()] = h256Hash();
-				queue[_approve->epoch()].insert(_approve->sha3());
-			}
-			else{
-				m_queue_ping.insert(_approve->sha3());
+			
+			switch(_approve->type()){
+				case mcp::WitnessElection:
+				{
+        			std::shared_ptr<mcp::witnessElectionApprove> a = std::dynamic_pointer_cast<mcp::witnessElectionApprove>(_approve);
+					if (!queue.count(a->epoch()))
+						queue[a->epoch()] = h256Hash();
+					queue[a->epoch()].insert(a->sha3());
+					break;
+				}
+				case mcp::DENMiningPing:
+				{
+					m_queue_ping.insert(_approve->sha3());
+					break;
+				}
+				default:
+					break;
 			}
 
 			all.insert(std::make_pair(_approve->sha3(), _approve));
@@ -95,17 +104,26 @@ namespace mcp
 			return false;
 		}
 
-		if(ap->second->type() == mcp::approve::WitnessElection){
-			auto epoch = ap->second->epoch();
-			if (queue.count(epoch))
+		switch(ap->second->type()){
+			case mcp::WitnessElection:
 			{
-				queue[epoch].erase(_txHash);
-				if (queue[epoch].empty())
-					queue.erase(epoch);
+        		std::shared_ptr<mcp::witnessElectionApprove> a = std::dynamic_pointer_cast<mcp::witnessElectionApprove>(ap->second);
+				auto epoch = a->epoch();
+				if (queue.count(epoch))
+				{
+					queue[epoch].erase(_txHash);
+					if (queue[epoch].empty())
+						queue.erase(epoch);
+				}
+				break;
 			}
-		}
-		else{
-			m_queue_ping.erase(_txHash);
+			case mcp::DENMiningPing:
+			{
+				m_queue_ping.erase(_txHash);
+				break;
+			}
+			default:
+				break;
 		}
 
 		all.erase(_txHash);
@@ -309,112 +327,122 @@ namespace mcp
 	ImportResult ApproveQueue::validateApprove(approve const& _t, source _in){
 		_t.checkChainId(mcp::chain_id);
 		_t.checkLowS();
-		if(_t.type() == mcp::approve::WitnessElection)
-		{
-			if (_t.epoch() < m_chain->last_stable_epoch() && _in == source::broadcast)
-				return ImportResult::EpochIsTooLow;
-			mcp::db::db_transaction transaction(m_store.create_transaction());
-			mcp::block_hash hash;
-			if(_t.epoch() <= 1){
-				hash = mcp::genesis::block_hash;
-			}
-			else{
-				bool ret = m_store.main_chain_get(transaction, (_t.epoch()-1)*epoch_period, hash);
-				if(ret){
-					LOG(m_log.debug) << "[validateApprove] epoch is too high";
-					//LOG(m_log.debug) << "[validateApprove] hash=" << hash.hex();
-					return ImportResult::EpochIsTooHigh;
-				}
-			}
-			_t.vrf_verify(hash);
-		}
-		else{
-			mcp::db::db_transaction transaction(m_store.create_transaction());
-			mcp::block_hash block_hash;
-			if(!m_chain->m_den->is_miner(_t.sender())){
-				LOG(m_log.error) << "[validateApprove] sender is not mining";
-				return ImportResult::Malformed;
-			}
 
-			LOG(m_log.info) << "[validateApprove] mci=" << _t.mci() << " hash=" << _t.hash().hexPrefixed();
-			if (m_store.main_chain_get(transaction, _t.mci(), block_hash))
+		switch(_t.type()){
+			case mcp::WitnessElection:
 			{
-				LOG(m_log.error) << "[validateApprove] faile to get mc's hash.";
-				return ImportResult::Malformed;
-			}
-			LOG(m_log.info) << "[validateApprove] block_hash=" << block_hash.hexPrefixed();
-			if(block_hash != _t.hash()){
-				LOG(m_log.error) << "[validateApprove] The hash value is incorrect.";
-				return ImportResult::Malformed;
-			}
-			std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, block_hash));
-			
-			#if 0 // For test
-			if(m_chain->cur_stable_time() > mc_block->exec_timestamp() + den_reward_period){
-				LOG(m_log.error) << "[validateApprove] ping's time is too late.";
-				return ImportResult::Malformed;
-			}
-			#endif
-
-			uint32_t hour = mc_block->exec_timestamp()/den_reward_period;
-			mcp::block_hash hour_hash;
-			if(m_store.den_period_mc_get(transaction, hour, hour_hash)){
-				LOG(m_log.error) << "[validateApprove] can't get hour's hash";
-				return ImportResult::Malformed;
-			}
-			LOG(m_log.info) << "[validateApprove] get hour" << hour << "\'s hash: " << hour_hash.hexPrefixed();
-
-        	if(den::need_ping(_t.sender(), hour_hash)){
-				LOG(m_log.info) << "[validateApprove] random is match";
-			}
-			else
-			{
-				//if continue not ping 100 times, need ping
-				uint64_t last_ping_time;
-				m_store.den_last_ping_time_get(transaction, _t.sender(), last_ping_time);
-				if((mc_block->exec_timestamp() - last_ping_time)/den_reward_period == 100){
-					LOG(m_log.debug) << "[validateApprove] No ping 100 hours and need send now";
-				}
-				else
-				{
-					LOG(m_log.error) << "[validateApprove] No ping's time less than 100 hours.";
-					return ImportResult::Malformed;
-				}
-			}
-
-			#if 0 // For test
-			uint16_t ah = _t.sender().data()[0];
-			ah = (ah << 8) + _t.sender().data()[1];
-			LOG(m_log.debug) << "[validateApprove] ah=" << ah;
-			if(mc_block->exec_timestamp()%den_reward_period >= ah%den_reward_period){
-				std::shared_ptr<mcp::block> mc_block_previous(m_cache->block_get(transaction, mc_block->previous()));
-				LOG(m_log.debug) << "[validateApprove] pre h:" << mc_block_previous->exec_timestamp()/den_reward_period << " h:" << mc_block->exec_timestamp()/den_reward_period << "pre yusu:" << mc_block_previous->exec_timestamp()%den_reward_period << "addr yusu" << ah%den_reward_period;
-				if((mc_block_previous->exec_timestamp()/den_reward_period < mc_block->exec_timestamp()/den_reward_period) || (mc_block_previous->exec_timestamp()%den_reward_period < ah%den_reward_period)){
-					LOG(m_log.debug) << "[validateApprove] time is ok";
+				mcp::witnessElectionApprove const & a = dynamic_cast<mcp::witnessElectionApprove const &>(_t);
+				if (a.epoch() < m_chain->last_stable_epoch() && _in == source::broadcast)
+					return ImportResult::EpochIsTooLow;
+				mcp::db::db_transaction transaction(m_store.create_transaction());
+				mcp::block_hash hash;
+				if(a.epoch() <= 1){
+					hash = mcp::genesis::block_hash;
 				}
 				else{
-					LOG(m_log.error) << "[validateApprove] fail to check time.";
+					bool ret = m_store.main_chain_get(transaction, (a.epoch()-1)*epoch_period, hash);
+					if(ret){
+						LOG(m_log.debug) << "[validateApprove] epoch is too high";
+						//LOG(m_log.debug) << "[validateApprove] hash=" << hash.hex();
+						return ImportResult::EpochIsTooHigh;
+					}
+				}
+				a.vrf_verify(hash);
+				break;
+			}
+			case mcp::DENMiningPing:
+			{
+				mcp::denMiningApprove const & a = dynamic_cast<mcp::denMiningApprove const &>(_t);
+				mcp::db::db_transaction transaction(m_store.create_transaction());
+				mcp::block_hash block_hash;
+				if(!m_chain->m_den->is_miner(a.sender())){
+					LOG(m_log.error) << "[validateApprove] sender is not mining";
 					return ImportResult::Malformed;
 				}
-			}
-			else{
-				mcp::block_hash block_hash_next;
-				if (m_store.main_chain_get(transaction, _t.mci()+1, block_hash_next))
+
+				LOG(m_log.info) << "[validateApprove] mci=" << a.mci() << " hash=" << a.hash().hexPrefixed();
+				if (m_store.main_chain_get(transaction, a.mci(), block_hash))
 				{
 					LOG(m_log.error) << "[validateApprove] faile to get mc's hash.";
 					return ImportResult::Malformed;
 				}
-				std::shared_ptr<mcp::block> mc_block_next(m_cache->block_get(transaction, block_hash_next));
-				LOG(m_log.debug) << "[validateApprove] nex h:" << mc_block_next->exec_timestamp()/den_reward_period << "h:" << mc_block->exec_timestamp()/den_reward_period;
-				if(mc_block_next->exec_timestamp()/den_reward_period > mc_block->exec_timestamp()/den_reward_period){
-					LOG(m_log.debug) << "[validateApprove] time is ok2";
-				}
-				else{
-					LOG(m_log.error) << "[validateApprove] fail to check time2.";
+				LOG(m_log.info) << "[validateApprove] block_hash=" << block_hash.hexPrefixed();
+				if(block_hash != a.hash()){
+					LOG(m_log.error) << "[validateApprove] The hash value is incorrect.";
 					return ImportResult::Malformed;
 				}
+				std::shared_ptr<mcp::block> mc_block(m_cache->block_get(transaction, block_hash));
+				
+				#if 0 // For test
+				if(m_chain->cur_stable_time() > mc_block->exec_timestamp() + den_reward_period){
+					LOG(m_log.error) << "[validateApprove] ping's time is too late.";
+					return ImportResult::Malformed;
+				}
+				#endif
+
+				uint32_t hour = mc_block->exec_timestamp()/den_reward_period;
+				mcp::block_hash hour_hash;
+				if(m_store.den_period_mc_get(transaction, hour, hour_hash)){
+					LOG(m_log.error) << "[validateApprove] can't get hour's hash";
+					return ImportResult::Malformed;
+				}
+				LOG(m_log.info) << "[validateApprove] get hour" << hour << "\'s hash: " << hour_hash.hexPrefixed();
+
+				if(den::need_ping(a.sender(), hour_hash)){
+					LOG(m_log.info) << "[validateApprove] random is match";
+				}
+				else
+				{
+					//if continue not ping 100 times, need ping
+					uint64_t last_ping_time;
+					m_store.den_last_ping_time_get(transaction, a.sender(), last_ping_time);
+					if((mc_block->exec_timestamp() - last_ping_time)/den_reward_period == 100){
+						LOG(m_log.debug) << "[validateApprove] No ping 100 hours and need send now";
+					}
+					else
+					{
+						LOG(m_log.error) << "[validateApprove] No ping's time less than 100 hours.";
+						return ImportResult::Malformed;
+					}
+				}
+
+				#if 0 // For test
+				uint16_t ah = a.sender().data()[0];
+				ah = (ah << 8) + a.sender().data()[1];
+				LOG(m_log.debug) << "[validateApprove] ah=" << ah;
+				if(mc_block->exec_timestamp()%den_reward_period >= ah%den_reward_period){
+					std::shared_ptr<mcp::block> mc_block_previous(m_cache->block_get(transaction, mc_block->previous()));
+					LOG(m_log.debug) << "[validateApprove] pre h:" << mc_block_previous->exec_timestamp()/den_reward_period << " h:" << mc_block->exec_timestamp()/den_reward_period << "pre yusu:" << mc_block_previous->exec_timestamp()%den_reward_period << "addr yusu" << ah%den_reward_period;
+					if((mc_block_previous->exec_timestamp()/den_reward_period < mc_block->exec_timestamp()/den_reward_period) || (mc_block_previous->exec_timestamp()%den_reward_period < ah%den_reward_period)){
+						LOG(m_log.debug) << "[validateApprove] time is ok";
+					}
+					else{
+						LOG(m_log.error) << "[validateApprove] fail to check time.";
+						return ImportResult::Malformed;
+					}
+				}
+				else{
+					mcp::block_hash block_hash_next;
+					if (m_store.main_chain_get(transaction, a.mci()+1, block_hash_next))
+					{
+						LOG(m_log.error) << "[validateApprove] faile to get mc's hash.";
+						return ImportResult::Malformed;
+					}
+					std::shared_ptr<mcp::block> mc_block_next(m_cache->block_get(transaction, block_hash_next));
+					LOG(m_log.debug) << "[validateApprove] nex h:" << mc_block_next->exec_timestamp()/den_reward_period << "h:" << mc_block->exec_timestamp()/den_reward_period;
+					if(mc_block_next->exec_timestamp()/den_reward_period > mc_block->exec_timestamp()/den_reward_period){
+						LOG(m_log.debug) << "[validateApprove] time is ok2";
+					}
+					else{
+						LOG(m_log.error) << "[validateApprove] fail to check time2.";
+						return ImportResult::Malformed;
+					}
+				}
+				#endif
+				break;
 			}
-			#endif
+			default:
+				break;
 		}
 		return ImportResult::Success;
 	}
