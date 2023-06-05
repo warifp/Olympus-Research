@@ -229,7 +229,7 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 	m_mcpRpcMethods["approve_receipt"] = &mcp::rpc_handler::approve_receipt;
 	m_mcpRpcMethods["dss_sendMiningPing"] = &mcp::rpc_handler::dss_sendMiningPing;
 	m_mcpRpcMethods["dss_sendRawMiningPing"] = &mcp::rpc_handler::dss_sendRawMiningPing;
-	m_mcpRpcMethods["den_calculateRewards"] = &mcp::rpc_handler::den_calculateRewards;
+	m_mcpRpcMethods["dss_calculateRewards"] = &mcp::rpc_handler::dss_calculateRewards;
 
 	m_ethRpcMethods["net_version"] = &mcp::rpc_handler::net_version;
 	m_ethRpcMethods["net_listening"] = &mcp::rpc_handler::net_listening;
@@ -2620,7 +2620,7 @@ void mcp::rpc_handler::dss_sendRawMiningPing(mcp::json &j_response, bool &async)
 	}
 }
 
-void mcp::rpc_handler::den_calculateRewards(mcp::json &j_response, bool &async)
+void mcp::rpc_handler::dss_calculateRewards(mcp::json &j_response, bool &async)
 {
 	mcp::json params = request["params"];
 	if (params.size() < 1 || !params[0].is_object())
