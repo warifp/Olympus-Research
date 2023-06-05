@@ -229,6 +229,7 @@ mcp::rpc_handler::rpc_handler(mcp::rpc &rpc_a, std::string const &body_a, std::f
 	m_mcpRpcMethods["approve_receipt"] = &mcp::rpc_handler::approve_receipt;
 	m_mcpRpcMethods["dss_sendMiningPing"] = &mcp::rpc_handler::dss_sendMiningPing;
 	m_mcpRpcMethods["dss_sendRawMiningPing"] = &mcp::rpc_handler::dss_sendRawMiningPing;
+	m_mcpRpcMethods["den_calculateRewards"] = &mcp::rpc_handler::den_calculateRewards;
 
 	m_ethRpcMethods["net_version"] = &mcp::rpc_handler::net_version;
 	m_ethRpcMethods["net_listening"] = &mcp::rpc_handler::net_listening;
@@ -2612,6 +2613,48 @@ void mcp::rpc_handler::dss_sendRawMiningPing(mcp::json &j_response, bool &async)
 	{
 		denMiningApprove t(jsToBytes(params[0], OnFailed::Throw), CheckTransaction::None);
 		j_response["result"] = toJS(m_wallet->importTransaction(t));
+	}
+	catch (dev::Exception &e)
+	{
+		toRpcExceptionEthJson(e, j_response);
+	}
+}
+
+void mcp::rpc_handler::den_calculateRewards(mcp::json &j_response, bool &async)
+{
+	mcp::json params = request["params"];
+	if (params.size() < 1 || !params[0].is_object())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_Eth_InvalidParams());
+	}
+	mcp::json param = params[0];
+	if (!param.count("den") || !param["den"].is_string())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+	}
+	if (!param.count("pool") || !param["pool"].is_string())
+	{
+		BOOST_THROW_EXCEPTION(RPC_Error_InvalidIndexNotExsist());
+	}
+
+
+	try
+	{
+		std::string den_text = param["den"];
+		if (!mcp::isAddress(den_text))
+		{
+			BOOST_THROW_EXCEPTION(RPC_Error_InvalidAccount());
+		}
+		dev::Address den(den_text);
+		uint64_t pool_id = jsToInt(param["pool"]);
+		dev::u256 give_rewards;
+		dev::u256 frozen_rewards;
+		mcp::g_den->calculate_rewards(den, mcp::seconds_since_epoch(), pool_id, give_rewards, frozen_rewards);
+		
+		mcp::json result;
+		result["releasedRewards"] = give_rewards;
+		result["frozenRewards"] = frozen_rewards;
+		j_response["result"] = result;
 	}
 	catch (dev::Exception &e)
 	{

@@ -375,6 +375,12 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
     if(m_den_witelist.find(addr) == m_den_witelist.end()) return false;
     den_unit u;
     m_store.den_rewards_get(transaction, addr, u);
+    if(id_a >= u.bondingPool.size()){
+        give_rewards = 0;
+        frozen_rewards = 0;
+        LOG(m_log.info) << "[calculate_rewards] id(" << id_a << ") >= size(" << u.bondingPool.size() << ")";
+        return false;
+    }
     uint64_t cur_day = time / den_reward_period_day;
     if(cur_day <= u.last_calc_day){
         give_rewards = u.bondingPool[id_a].rewards;
