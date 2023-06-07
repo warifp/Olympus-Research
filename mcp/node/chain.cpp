@@ -1083,12 +1083,12 @@ void mcp::chain::advance_stable_mci(mcp::timeout_db_transaction & timeout_tx_a, 
 		}
 	}
 	m_cur_stable_time = mc_timestamp;
-	uint32_t hour;
 	mcp::block_hash hash;
-	if(m_store.den_period_mc_get(transaction_a, mc_timestamp/den_reward_period, hash)){
-		m_store.den_period_mc_put(transaction_a, mc_timestamp/den_reward_period, mc_stable_hash);
+	if(m_cache->den_period_mc_get(transaction_a, mc_timestamp/den_reward_period, hash)){
+		m_cache->den_period_mc_put(transaction_a, mc_timestamp/den_reward_period, mc_stable_hash);
 		LOG(m_log.info) << "[advance_stable_mci] den_period_mc_put hour " << mc_timestamp/den_reward_period << "hash=" << mc_stable_hash.hexPrefixed();
 	}
+	LOG(m_log.info) << "[advance_stable_mci] den_period_mc_get hour " << mc_timestamp/den_reward_period << "hash=" << hash.hexPrefixed();
 }
 
 void mcp::chain::set_block_stable(mcp::timeout_db_transaction & timeout_tx_a, std::shared_ptr<mcp::process_block_cache> cache_a, mcp::block_hash const & stable_block_hash, 

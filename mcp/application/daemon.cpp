@@ -761,7 +761,7 @@ void mcp_daemon::daemon::run(boost::filesystem::path const &data_path, boost::pr
 		///cache
 		std::shared_ptr<mcp::block_cache> cache(std::make_shared<mcp::block_cache>(chain_store));
 
-		mcp::g_den = std::make_shared<mcp::den>(chain_store);
+		mcp::g_den = std::make_shared<mcp::den>(chain_store, cache);
 
 		mcp::param::init(cache);
 		///chain

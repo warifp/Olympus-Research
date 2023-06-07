@@ -1165,7 +1165,7 @@ void mcp::block_store::transaction_previous_account_state_put(mcp::db::db_transa
 	transaction_a.put(transaction_account_state, mcp::h256_to_slice(link_a), s_value);
 }
 
-bool mcp::block_store::den_period_mc_get(mcp::db::db_transaction & transaction_a, uint32_t const & hour, mcp::block_hash & hash_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
+bool mcp::block_store::den_period_mc_get(mcp::db::db_transaction & transaction_a, uint64_t const & hour, mcp::block_hash & hash_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
 {
 	std::string value;
 	dev::h64 h(hour);
@@ -1177,7 +1177,7 @@ bool mcp::block_store::den_period_mc_get(mcp::db::db_transaction & transaction_a
 	return !exists;
 }
 
-void mcp::block_store::den_period_mc_put(mcp::db::db_transaction & transaction_a, uint32_t const & hour, mcp::block_hash const & hash_a)
+void mcp::block_store::den_period_mc_put(mcp::db::db_transaction & transaction_a, uint64_t const & hour, mcp::block_hash const & hash_a)
 {
 	dev::h64 h(hour);
 	transaction_a.put(den_period_mc, mcp::h64_to_slice(h), mcp::h256_to_slice(hash_a));

@@ -106,6 +106,9 @@ class block_cache : public mcp::iblock_cache
 	std::shared_ptr<witness_param> epoch_param_get(mcp::db::db_transaction & transaction_a, Epoch const & epoch);
 	void epoch_param_put(mcp::db::db_transaction & transaction_a, Epoch const & epoch, std::shared_ptr<witness_param> param);
 
+	bool den_period_mc_get(mcp::db::db_transaction & transaction_a, uint64_t const & hour, mcp::block_hash & hash_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a = nullptr);
+	void den_period_mc_put(mcp::db::db_transaction & transaction_a, uint64_t const & hour, mcp::block_hash const & hash_a);
+
 	std::string report_cache_size();
 
 private:
@@ -158,5 +161,8 @@ private:
 
 	std::mutex m_epoch_param_mutex;
 	mcp::Cache<Epoch, std::shared_ptr<mcp::witness_param>> m_epoch_param;
+
+	std::mutex m_den_period_mc_mutex;
+	mcp::Cache<uint64_t, mcp::block_hash> m_den_period_mc;
 };
 } // namespace mcp

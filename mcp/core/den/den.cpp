@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <map>
 #include <mcp/core/block_store.hpp>
+#include <mcp/core/block_cache.hpp>
 #include <mcp/core/approve.hpp>
 #include "mcp/rpc/jsonHelper.hpp"
 #include "mcp/node/message.hpp"
@@ -116,8 +117,9 @@ const std::string DENContractABI ="\
 }\
 ]";
 
-mcp::den::den(mcp::block_store& store_a) :
-    m_store(store_a)
+mcp::den::den(mcp::block_store& store_a, std::shared_ptr<block_cache> cache_a) :
+    m_store(store_a),
+    m_cache(cache_a)
 {
     m_abi = dev::JSON(DENContractABI);
 }
@@ -339,7 +341,7 @@ void mcp::den::handle_den_mining_ping(mcp::db::db_transaction & transaction_a, c
     for(uint64_t h=u.last_handle_ping_time/den_reward_period+1; h<time/den_reward_period; h++){
         mcp::block_hash hash;
         LOG(m_log.info) << "[handle_den_mining_ping] h="<<h<<" last_handle_ping_time="<<u.last_handle_ping_time<<" time="<<time;
-        bool ret = m_store.den_period_mc_get(transaction_a, h, hash);
+        bool ret = m_cache->den_period_mc_get(transaction_a, h, hash);
         if(ret){
             continue;
         }

@@ -563,6 +563,26 @@ void mcp::block_cache::epoch_param_put(mcp::db::db_transaction & transaction_a, 
 	m_epoch_param.insert(epoch, param);
 }
 
+bool mcp::block_cache::den_period_mc_get(mcp::db::db_transaction & transaction_a, uint64_t const & hour, mcp::block_hash & hash_a, std::shared_ptr<rocksdb::ManagedSnapshot> snapshot_a)
+{
+	std::lock_guard<std::mutex> lock(m_den_period_mc_mutex);
+	bool exists = m_den_period_mc.tryGet(hour, hash_a);
+	if (!exists)
+	{
+		exists = !m_store.den_period_mc_get(transaction_a, hour, hash_a);
+		if (exists)
+			m_den_period_mc.insert(hour, hash_a);
+	}
+	return !exists;
+}
+
+void mcp::block_cache::den_period_mc_put(mcp::db::db_transaction & transaction_a, uint64_t const & hour, mcp::block_hash const & hash_a)
+{
+	std::lock_guard<std::mutex> lock(m_den_period_mc_mutex);
+	m_store.den_period_mc_put(transaction_a, hour, hash_a);
+	m_den_period_mc.insert(hour, hash_a);
+}
+
 std::string mcp::block_cache::report_cache_size()
 {
 	std::stringstream s;

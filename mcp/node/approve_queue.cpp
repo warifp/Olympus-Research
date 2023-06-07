@@ -380,9 +380,9 @@ namespace mcp
 				}
 				#endif
 
-				uint32_t hour = mc_block->exec_timestamp()/den_reward_period;
+				uint64_t hour = mc_block->exec_timestamp()/den_reward_period;
 				mcp::block_hash hour_hash;
-				if(m_store.den_period_mc_get(transaction, hour, hour_hash)){
+				if(m_cache->den_period_mc_get(transaction, hour, hour_hash)){
 					LOG(m_log.error) << "[validateApprove] can't get hour's hash";
 					return ImportResult::Malformed;
 				}

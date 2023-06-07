@@ -92,10 +92,11 @@ namespace mcp
     };
 
     class block_store;
+    class block_cache;
     class den
     {
     public:
-        den(mcp::block_store& store_a);
+        den(block_store& store_a, std::shared_ptr<block_cache> cache_a);
         void handle_den_mining_event(mcp::db::db_transaction & transaction_a, const log_entries &log_a, const uint64_t &time);
         void handle_den_mining_ping(mcp::db::db_transaction & transaction_a, const dev::Address &addr,  den_unit &u, const uint64_t &time, bool ping, std::map<uint64_t, std::map<uint8_t, den_ping>>& pings);
         bool calculate_rewards(const dev::Address &addr, const uint64_t time, const uint64_t bondingPoolId, dev::u256 &give_rewards, dev::u256 &frozen_rewards);
@@ -125,6 +126,7 @@ namespace mcp
         std::unordered_set<dev::Address> m_den_witelist;
         dev::ABI m_abi;
 		mcp::block_store & m_store;
+        std::shared_ptr<block_cache> m_cache;
         mcp::log m_log = { mcp::log("node") };
     };
     

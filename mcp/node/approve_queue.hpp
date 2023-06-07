@@ -126,7 +126,7 @@ namespace mcp
 		std::atomic<bool> m_aborting = { false };          ///< Exit condition for verifier.
 
 		mcp::block_store & m_store;
-		std::shared_ptr<mcp::iblock_cache> m_cache;
+		std::shared_ptr<mcp::block_cache> m_cache;
 		std::shared_ptr<mcp::async_task> m_async_task;
 		std::shared_ptr<mcp::chain> m_chain;
 		std::shared_ptr<mcp::node_capability> m_capability;
