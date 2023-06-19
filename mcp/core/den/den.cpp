@@ -262,11 +262,9 @@ void mcp::den::handle_event_setBondingPool(mcp::db::db_transaction & transaction
     LOG(m_log.info) << "handle_event_setBondingPool miner=" << miner.hexPrefixed() << " id=" << id;
     bool ret = m_store.den_rewards_get(transaction_a, miner, u);
     assert(!ret);
-    assert((id == 0) || (id == u.bondingPool.size()));
-    u.plan.emplace_back(bonding_pool_plan{time / mcp::den_reward_period_day, (uint32_t)id});
-    if(id == u.bondingPool.size()){
-        u.bondingPool.emplace_back(den_bonding_pool{0, std::map<uint64_t, den_reward_a_day>{}});
-    }
+    assert((id == 0) || (0 == u.bondingPool.count(id)));
+    u.plan.emplace_back(bonding_pool_plan{time / mcp::den_reward_period_day, (uint64_t)id});
+    u.bondingPool.emplace(id, den_bonding_pool{0, std::map<uint64_t, den_reward_a_day>{}});
     m_store.den_rewards_put(transaction_a, miner, u);
 }
 
@@ -377,10 +375,10 @@ bool mcp::den::calculate_rewards(const dev::Address &addr, const uint64_t time, 
     if(m_den_witelist.find(addr) == m_den_witelist.end()) return false;
     den_unit u;
     m_store.den_rewards_get(transaction, addr, u);
-    if(id_a >= u.bondingPool.size()){
+    if(0 == u.bondingPool.count(id_a)){
         give_rewards = 0;
         frozen_rewards = 0;
-        LOG(m_log.info) << "[calculate_rewards] id(" << id_a << ") >= size(" << u.bondingPool.size() << ")";
+        LOG(m_log.info) << "[calculate_rewards] id(" << id_a << ") is not includ";
         return false;
     }
     uint64_t cur_day = time / den_reward_period_day;
@@ -614,17 +612,18 @@ void mcp::den_unit::rewards_get(dev::RLP const & rlp)
     LOG(m_log.info) << "[rewards_get] no_ping_times=" << no_ping_times << " ping_lose_time=" << ping_lose_time << " online_score=" <<online_score;
     LOG(m_log.info) << "[rewards_get] stakeAmount=" << stakeAmount.str() << " maxStake=" << maxStake.str() << " plan size=" << plan_size << " bondingPool size=" << pool_size;
     plan.resize(plan_size);
-    bondingPool.resize(pool_size);
     int index = 9;
     for(auto &p : plan){
         p.startDay = rlp[index++].toInt<uint64_t>();
         p.id = rlp[index++].toInt<uint32_t>();
     }
     
-    for(auto &pool : bondingPool){
+    while(bondingPool.size() < pool_size){
+        uint64_t id =  rlp[index++].toInt<uint64_t>();
+        den_bonding_pool pool;
         pool.rewards = rlp[index++].toInt<u256>();
         int32_t frozenSize = rlp[index++].toInt<uint32_t>();
-        LOG(m_log.info) << "[rewards_get] rewards=" << pool.rewards << " frozenSize=" << frozenSize;
+        LOG(m_log.info) << "[rewards_get] poolId=" << id << " rewards=" << pool.rewards << " frozenSize=" << frozenSize;
         for(int j=0; j<frozenSize; j++){
             uint64_t day = rlp[index++].toInt<uint64_t>();
             dev::u256 release_a_day = rlp[index++].toInt<u256>();
@@ -632,6 +631,7 @@ void mcp::den_unit::rewards_get(dev::RLP const & rlp)
             pool.frozen[day] = {release_a_day, frozen_reward};
             LOG(m_log.info) << "[rewards_get] day=" << day << " release_a_day=" << release_a_day.str() << " frozen_reward=" << frozen_reward.str();
         }
+        bondingPool.emplace(id, pool);
     }
 }
 
@@ -639,7 +639,7 @@ void mcp::den_unit::rewards_streamRLP(RLPStream& s)
 {
     uint32_t size = den_except_frozen_len + plan.size()*2;
     for(auto pool : bondingPool){
-        size += 2 + pool.frozen.size() * 3;
+        size += 3 + pool.second.frozen.size() * 3;
     }
     s.appendList(size);
     LOG(m_log.info) << "[rewards_streamRLP] last_calc_day=" <<last_calc_day << " last_receive=" << last_receive;
@@ -653,9 +653,9 @@ void mcp::den_unit::rewards_streamRLP(RLPStream& s)
     }
     for(auto &pool : bondingPool)
     {
-        s << pool.rewards << pool.frozen.size();
-        LOG(m_log.info) << "[rewards_streamRLP] rewards=" << pool.rewards.str() << " frozenSize=" << pool.frozen.size();
-        for(std::map<uint64_t, mcp::den_reward_a_day>::iterator it=pool.frozen.begin(); it!=pool.frozen.end(); it++){
+        s << pool.first << pool.second.rewards << pool.second.frozen.size();
+        LOG(m_log.info) << "[rewards_streamRLP] poolId=" << pool.first << " rewards=" << pool.second.rewards.str() << " frozenSize=" << pool.second.frozen.size();
+        for(std::map<uint64_t, mcp::den_reward_a_day>::iterator it=pool.second.frozen.begin(); it!=pool.second.frozen.end(); it++){
             s << it->first << it->second.release_a_day << it->second.frozen_reward;
             LOG(m_log.info) << "[rewards_streamRLP] day=" <<it->first << " release_a_day=" << it->second.release_a_day << " frozen_reward=" << it->second.frozen_reward;
         }
