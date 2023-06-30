@@ -62,9 +62,9 @@ namespace dev
 				std::string name = ResolveNameConflict(field.Name, [this](std::string const& _name) { return Events.count(_name); });
 				Events[name] = NewEvent(name, field.Name, field.Anonymous, field.Inputs);
 			}
-			//else if ("error" == field.Type)///do it in the future
-			//{
-			//}
+			else if ("error" == field.Type)///do it in the future
+			{
+			}
 			else
 				BOOST_THROW_EXCEPTION(dev::FailedABI());
 		}
